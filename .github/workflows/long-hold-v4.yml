@@ -3,12 +3,14 @@ name: long-hold-v4
 on:
   push:
     paths:
+      - ".github/workflows/long-hold-v4.yml"
       - "strategy_lab/long_hold_v4/**"
       - "tests/test_long_hold_v4*.py"
       - "configs/long_hold_v4*.json"
       - "requirements-long-hold-v4.txt"
   pull_request:
     paths:
+      - ".github/workflows/long-hold-v4.yml"
       - "strategy_lab/long_hold_v4/**"
       - "tests/test_long_hold_v4*.py"
       - "configs/long_hold_v4*.json"
