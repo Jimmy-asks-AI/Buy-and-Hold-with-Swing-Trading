@@ -9,3 +9,4 @@ lxml==6.0.3
 charset-normalizer==3.4.7
 jqdatasdk==1.9.8
 baostock==0.8.9
+pytest==9.0.3
