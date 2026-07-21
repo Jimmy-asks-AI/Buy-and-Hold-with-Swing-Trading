@@ -1,0 +1,65 @@
+{
+  "task_id": "20260529_v3_58_long_market_proxy_source",
+  "as_of_date": "20260529",
+  "primary_index_code": "000985",
+  "candidate_sources": [
+    {
+      "index_code": "000985",
+      "asset_or_index": "MARKET",
+      "role": "primary_broad_a_share_price_proxy",
+      "source_path": "data_raw/index/akshare_csindex/daily_csindex/000985.csv"
+    },
+    {
+      "index_code": "000300",
+      "asset_or_index": "CSI300",
+      "role": "large_cap_cross_check",
+      "source_path": "data_raw/index/akshare_csindex/daily_csindex/000300.csv"
+    },
+    {
+      "index_code": "000905",
+      "asset_or_index": "CSI500",
+      "role": "mid_small_cap_cross_check",
+      "source_path": "data_raw/index/akshare_csindex/daily_csindex/000905.csv"
+    },
+    {
+      "index_code": "000016",
+      "asset_or_index": "SSE50",
+      "role": "large_cap_style_cross_check",
+      "source_path": "data_raw/index/akshare_csindex/daily_csindex/000016.csv"
+    },
+    {
+      "index_code": "000015",
+      "asset_or_index": "DIVIDEND",
+      "role": "high_dividend_style_cross_check",
+      "source_path": "data_raw/index/akshare_csindex/daily_csindex/000015.csv"
+    }
+  ],
+  "output_dir": "outputs/agent_runs/v3_58/long_market_proxy_source",
+  "catalog_path": "data_catalog/a_share_long_market_proxy_source_v3_58.md",
+  "raw_proxy_path": "data_raw/market_labels/market_price_index_proxy_000985.csv",
+  "official_total_return_path": "data_raw/market_labels/market_total_return_index.csv",
+  "minimums": {
+    "primary_rows": 5000,
+    "regular_rows": 5000,
+    "start_date_lte": "20050104",
+    "end_date_gte": "20260501",
+    "max_staleness_days": 14,
+    "max_return_diff_bps": 5.0
+  },
+  "allowed_inputs": [
+    "data_raw/index/akshare_csindex/daily_csindex/000985.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000300.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000905.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000016.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000015.csv"
+  ],
+  "forbidden_now": [
+    "write_official_market_total_return_source",
+    "run_ic_or_rank_ic",
+    "run_hit_rate",
+    "run_state_performance_validation",
+    "run_portfolio_backtest",
+    "model_promotion",
+    "claim_total_return_performance"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "task_id": "20260529_v3_68_industry_breadth_dispersion_features",
+  "v3_66_manifest_path": "outputs/agent_runs/v3_66/independent_pit_source_discovery/agent_run_manifest.json",
+  "v3_66_queue_path": "outputs/agent_runs/v3_66/independent_pit_source_discovery/next_validation_queue.csv",
+  "v3_66_inventory_path": "outputs/agent_runs/v3_66/independent_pit_source_discovery/source_inventory.csv",
+  "industry_daily_dir": "data_raw/index/akshare_sw_industry/daily_sw",
+  "classification_path": "data_raw/index/akshare_sw_industry/classification/sw_level1_info.csv",
+  "output_dir": "outputs/agent_runs/v3_68/industry_breadth_dispersion_features",
+  "catalog_path": "data_catalog/a_share_industry_breadth_dispersion_features_v3_68.md",
+  "feature_parameters": {
+    "industry_level": "first",
+    "min_history": 60,
+    "trailing_window": 252,
+    "short_window": 5,
+    "medium_window": 20,
+    "long_window": 60,
+    "slow_window": 120
+  },
+  "quality_thresholds": {
+    "min_feature_rows": 6000,
+    "min_industry_count": 25
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/agent_run_manifest.json",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/next_validation_queue.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/source_inventory.csv",
+    "data_raw/index/akshare_sw_industry/daily_sw/",
+    "data_raw/index/akshare_sw_industry/classification/sw_level1_info.csv"
+  ],
+  "forbidden_now": [
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "write_annualized_return",
+    "write_portfolio_return",
+    "model_promotion",
+    "default_enablement",
+    "same_branch_threshold_tuning",
+    "current_component_snapshot_use",
+    "latest_weight_snapshot_use",
+    "official_total_return_claim"
+  ]
+}

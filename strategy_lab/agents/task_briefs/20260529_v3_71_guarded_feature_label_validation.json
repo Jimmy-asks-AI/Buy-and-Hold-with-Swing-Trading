@@ -1,0 +1,88 @@
+{
+  "task_id": "20260529_v3_71_guarded_feature_label_validation",
+  "parent_id": "20260529_v3_70_combined_feature_registry",
+  "version": "V3.71",
+  "assigned_agent": "backtest_validation_auditor",
+  "status": "ready",
+  "objective": "Run guarded proxy feature-label validation by joining the V3.70 combined feature registry to V3.59 non-official price-index proxy labels; output diagnostics and stricter-review queues only.",
+  "baseline": {
+    "version": "V3.70",
+    "script": "strategy_lab/hirssm_v3_71_guarded_feature_label_validation.py",
+    "output_dir": "outputs/agent_runs/v3_71/guarded_feature_label_validation",
+    "metrics_to_compare": [
+      "validation_feature_rows",
+      "feature_horizon_summary_rows",
+      "walk_forward_window_rows",
+      "proxy_pass_for_stricter_review_rows"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/guarded_feature_label_validation_v3_71.json",
+    "outputs/agent_runs/v3_70/combined_feature_registry/agent_run_manifest.json",
+    "outputs/agent_runs/v3_70/combined_feature_registry/combined_feature_panel.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/feature_registry.csv",
+    "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+    "outputs/agent_runs/v3_59/market_price_proxy_label_importer/agent_run_manifest.json"
+  ],
+  "allowed_writes": [
+    "strategy_lab/guarded_feature_label_validation.py",
+    "strategy_lab/hirssm_v3_71_guarded_feature_label_validation.py",
+    "configs/guarded_feature_label_validation_v3_71.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_71_guarded_feature_label_validation.json",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/",
+    "data_catalog/a_share_guarded_feature_label_validation_v3_71.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_70_combined_feature_registry",
+    "20260529_v3_59_market_price_proxy_label_importer"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/input_checks.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/validation_feature_registry.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/validation_universe.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/full_sample_feature_stats.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/walk_forward_feature_results.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/feature_horizon_summary.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/source_family_summary.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/candidate_decision.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/multiple_testing_report.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/acceptance_checks.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/guarded_feature_label_validation_report.md",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/agent_run_manifest.json",
+    "data_catalog/a_share_guarded_feature_label_validation_v3_71.md"
+  ],
+  "forbidden": [
+    "Do not run a portfolio backtest.",
+    "Do not generate NAV, Sharpe, drawdown, annualized return, or portfolio-return outputs.",
+    "Do not use proxy labels as official total-return evidence.",
+    "Do not promote any feature into the default model.",
+    "Do not ignore stale macro warnings for macro features.",
+    "Do not tune thresholds after seeing full-sample winners."
+  ],
+  "acceptance_criteria": [
+    "V3.70 and V3.59 manifests must pass their own self checks.",
+    "Label source must be price_index_return and non_official_price_proxy_label_only.",
+    "At least 4500 validation-ready dates must be available before horizon expansion.",
+    "All registered numeric features must be evaluated or explicitly filtered by type.",
+    "Walk-forward diagnostics must use train-only sign orientation.",
+    "Negative-control and multiple-testing reports must be written.",
+    "No output permits portfolio backtest, official total-return validation, or model promotion."
+  ],
+  "failure_conditions": [
+    "Any output allows portfolio harness or model promotion.",
+    "Any official total-return evidence is claimed.",
+    "Any NAV, Sharpe, drawdown, annualized return, or portfolio-return output is produced.",
+    "Any macro feature validation includes stale macro rows despite the configured exclusion policy.",
+    "Any credential appears outside configs/data_credentials.json."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Forbidden performance or promotion column scan returns zero hits.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "chief_quant_orchestrator should decide whether V3.72 runs stricter label-source review, feature clustering, or retires weak proxy-positive rows."
+}

@@ -1,0 +1,87 @@
+{
+  "task_id": "20260601_v3_83_market_label_real_sample_ops_pack",
+  "parent_id": "20260601_v3_82_market_label_registered_sample_intake_orchestrator",
+  "version": "V3.83",
+  "assigned_agent": "data_steward",
+  "status": "ready",
+  "objective": "Create a durable real-sample operations pack that tells the operator exactly how to place a provider MARKET sample, attach license evidence, rerun V3.80 and V3.82, and only then run controlled V3.78 validation without copying raw data, writing the target source, or executing downstream model work.",
+  "baseline": {
+    "version": "V3.82",
+    "script": "strategy_lab/hirssm_v3_83_market_label_real_sample_ops_pack.py",
+    "output_dir": "outputs/agent_runs/v3_83/real_sample_ops_pack",
+    "metrics_to_compare": [
+      "ops_manual_written",
+      "license_template_written",
+      "license_status_template_written",
+      "command_runbook_rows",
+      "may_execute_v3_78_now",
+      "may_execute_v3_53_now"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/market_label_real_sample_ops_pack_v3_83.json",
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/agent_run_manifest.json",
+    "outputs/agent_runs/v3_80/market_label_raw_sample_registry/raw_sample_registry_template.csv",
+    "configs/market_label_sample_intake_validator_v3_78.json",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/market_total_return_index.vendor_template.csv",
+    "data_raw/market_labels/incoming_samples",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/market_label_real_sample_ops_pack.py",
+    "strategy_lab/hirssm_v3_83_market_label_real_sample_ops_pack.py",
+    "configs/market_label_real_sample_ops_pack_v3_83.json",
+    "strategy_lab/agents/task_briefs/20260601_v3_83_market_label_real_sample_ops_pack.json",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/",
+    "data_catalog/a_share_real_sample_ops_pack_v3_83.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260601_v3_80_market_label_raw_sample_registry",
+    "20260601_v3_82_market_label_registered_sample_intake_orchestrator",
+    "20260529_v3_75_label_source_procurement_pack",
+    "20260529_v3_76_market_label_source_intake_orchestrator"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/real_sample_ops_manual.md",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/license_evidence.template.md",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/license_review_status.template.csv",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/command_runbook.csv",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/human_input_checklist.csv",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/no_execution_guard.csv",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/acceptance_checks.csv",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/real_sample_ops_pack_report.md",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/agent_run_manifest.json",
+    "data_catalog/a_share_real_sample_ops_pack_v3_83.md"
+  ],
+  "forbidden": [
+    "Do not create data_raw/market_labels/incoming_samples.",
+    "Do not copy, move, or edit raw provider samples.",
+    "Do not write data_raw/market_labels/incoming_samples/license_review_status.csv.",
+    "Do not write data_raw/market_labels/market_total_return_index.csv.",
+    "Do not execute V3.78, V3.53, label generation, portfolio validation, NAV, Sharpe, drawdown, annualized return, or model promotion outputs."
+  ],
+  "acceptance_criteria": [
+    "Operations manual, license evidence template, license status template, command runbook, and checklist are written.",
+    "All command runbook rows have may_execute_now=false.",
+    "No raw sample, real license status file, target CSV, labels, portfolio result, or model-promotion output is produced.",
+    "V3.82 manifest is checked.",
+    "Self-check and acceptance checks pass."
+  ],
+  "failure_conditions": [
+    "The incoming sample directory is created by this task.",
+    "Any raw sample is copied or modified by this task.",
+    "The real license_review_status.csv is written by this task.",
+    "The official target source is written by this task.",
+    "Any downstream validation, label, portfolio, or promotion command is executed.",
+    "Any credential appears in outputs."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Output columns contain no forbidden performance or promotion fields.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "When a real provider sample is available, follow real_sample_ops_manual.md: run V3.80 once for hash, manually fill license review evidence, rerun V3.80, rerun V3.82, then run the generated controlled V3.78 command only if eligible."
+}

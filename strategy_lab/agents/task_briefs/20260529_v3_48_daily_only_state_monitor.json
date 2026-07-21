@@ -1,0 +1,35 @@
+{
+  "task_id": "20260529_v3_48_daily_only_state_monitor",
+  "version": "V3.48",
+  "role": "state_monitor_engineer",
+  "objective": "Build point-in-time data quality monitoring and market state tags from the V3.47 daily-only diagnostic feature layer.",
+  "fixed_inputs": [
+    "configs/daily_only_state_monitor_v3_48.json",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/daily_market_feature_panel.csv",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/agent_run_manifest.json"
+  ],
+  "outputs": [
+    "strategy_lab/daily_only_state_monitor.py",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/state_dictionary.csv",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/state_transition_summary.csv",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/latest_state_snapshot.csv",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/state_quality_checks.csv",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/state_monitor_report.md",
+    "data_catalog/a_share_daily_only_state_monitor_v3_48.md"
+  ],
+  "forbidden": [
+    "Do not read raw daily CSVs.",
+    "Do not compute return labels, adjusted returns, total returns, valuation, dividends, or portfolio performance.",
+    "Do not use full-sample quantiles for state labels.",
+    "Do not promote states into a model or trading rule."
+  ],
+  "acceptance": [
+    "State panel rows must equal V3.47 feature rows.",
+    "Trailing percentiles must use prior observations only.",
+    "Data scope must remain accepted_processed_daily_only and price_adjustment none_raw.",
+    "No bad OHLC rows may remain.",
+    "No forbidden return or valuation columns may be produced.",
+    "The report must state that no model or backtest promotion occurred."
+  ]
+}

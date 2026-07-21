@@ -1,0 +1,34 @@
+{
+  "task_id": "20260602_v3_86_quant_research_assistant_architecture",
+  "parent_id": "20260602_v3_85_market_label_real_sample_dry_run_harness",
+  "version": "V3.86",
+  "assigned_agent": "chief_quant_orchestrator",
+  "status": "accepted",
+  "objective": "Upgrade the framework from strategy-only iteration to object-level quant research assistant architecture.",
+  "baseline": {
+    "version": "V3.85",
+    "script": "strategy_lab/hirssm_v3_85_market_label_real_sample_dry_run_harness.py",
+    "output_dir": "outputs/agent_runs/v3_85/real_sample_intake_dry_run/",
+    "metrics_to_compare": ["governance_pass", "data_gate_status"]
+  },
+  "allowed_inputs": ["reports/AGENT_TASK_BOARD.md", "strategy_lab/agents/"],
+  "allowed_writes": [
+    "outputs/agent_runs/v3_86/quant_research_assistant_architecture/",
+    "data_catalog/a_share_quant_research_assistant_v3_86_to_v3_92.md",
+    "strategy_lab/agent_framework_check.py",
+    "strategy_lab/agents/README.md",
+    "strategy_lab/agents/RACI_MATRIX.md",
+    "strategy_lab/agents/AGENT_IO_CONTRACT.md",
+    "strategy_lab/agents/AGENT_WORKFLOW.md",
+    "strategy_lab/agents/technical_market_analyst/AGENT.md",
+    "strategy_lab/agents/fundamental_equity_analyst/AGENT.md",
+    "strategy_lab/agents/investment_view_synthesizer/AGENT.md"
+  ],
+  "dependencies": ["20260602_v3_85_market_label_real_sample_dry_run_harness"],
+  "required_outputs": ["agent_role_upgrade_matrix.csv", "architecture_governance_coverage.csv", "assistant_operating_model.md", "agent_run_manifest.json", "acceptance_checks.csv", "self_check.csv"],
+  "forbidden": ["Do not claim any portfolio return improvement.", "Do not promote research views into strategy rules."],
+  "acceptance_criteria": ["All registered roles are represented.", "Research assistant roles are explicit.", "Research-view and strategy-promotion boundaries are explicit.", "Governance documents and AGENT specs are covered."],
+  "failure_conditions": ["Missing manifest.", "Role matrix omits fixed input or forbidden behavior.", "New assistant agent lacks AGENT.md.", "Research assistant views can be promoted without validation."],
+  "quality_gates": ["Output files parse.", "Task board registration exists.", "Framework self-check remains pass.", "Governance coverage files exist."],
+  "next_handoff": "data_steward"
+}

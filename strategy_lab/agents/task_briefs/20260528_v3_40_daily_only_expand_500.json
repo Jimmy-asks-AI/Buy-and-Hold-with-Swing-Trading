@@ -1,0 +1,38 @@
+{
+  "task_id": "20260528_v3_40_daily_only_expand_500",
+  "version": "V3.40",
+  "agent": "data_steward",
+  "objective": "Continue daily-only Tushare raw daily acquisition with a 500-business-day cap after V3.39 passed quality checks.",
+  "fixed_inputs": [
+    "configs/data_credentials.json",
+    "configs/daily_only_permission_v3_40_expand_500.json",
+    "strategy_lab/hirssm_v3_38_daily_only_permission_profile.py",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/manual_data_interface_queue.md",
+    "outputs/agent_runs/v3_39/daily_only_expand_300/expansion_summary.md"
+  ],
+  "outputs": [
+    "data_raw/tushare_daily_only/v3_38/daily/trade_date=YYYYMMDD.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_harvest_log.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_quality_report.csv",
+    "outputs/agent_runs/v3_40/daily_only_expand_500/expansion_summary.md"
+  ],
+  "manual_data_interfaces_still_needed": [
+    "adj_factor",
+    "stock_basic",
+    "daily_basic",
+    "index_weight",
+    "index_dailybasic"
+  ],
+  "forbidden_actions": [
+    "Do not call endpoints other than tushare.daily.",
+    "Do not run adjusted-return, valuation, PIT constituent, factor, or portfolio research.",
+    "Do not delete existing daily files; use cache/resume only.",
+    "Do not remove or weaken the manual interface queue."
+  ],
+  "acceptance": [
+    "At most 500 new trade-date API calls are attempted.",
+    "All acquired dates pass duplicate and OHLCV quality checks or are explicitly reported.",
+    "The manual data interface queue remains available.",
+    "The run produces an expansion summary with coverage, row counts, error counts, and remaining queued dates."
+  ]
+}

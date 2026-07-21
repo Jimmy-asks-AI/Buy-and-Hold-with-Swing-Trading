@@ -1,0 +1,83 @@
+{
+  "task_id": "20260529_v3_74_live_label_source_acquisition_attempt",
+  "parent_id": "20260529_v3_73_higher_quality_label_source_review",
+  "version": "V3.74",
+  "assigned_agent": "data_steward",
+  "status": "ready",
+  "objective": "Attempt live acquisition of a higher-quality MARKET label source from available provider credentials, while preventing unapproved candidate data from being written as the official source.",
+  "baseline": {
+    "version": "V3.73",
+    "script": "strategy_lab/hirssm_v3_74_live_label_source_acquisition_attempt.py",
+    "output_dir": "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt",
+    "metrics_to_compare": [
+      "joinquant_candidate_rows",
+      "source_quality_gate_pass",
+      "signal_coverage_gate_pass",
+      "target_source_written",
+      "minimum_signal_coverage_ratio"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/live_label_source_acquisition_attempt_v3_74.json",
+    "outputs/agent_runs/v3_73/higher_quality_label_source_review/agent_run_manifest.json",
+    "outputs/agent_runs/v3_73/higher_quality_label_source_review/strict_survivor_label_review_queue.csv",
+    "outputs/agent_runs/v3_73/higher_quality_label_source_review/required_total_return_source_contract.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+    "configs/data_credentials.json"
+  ],
+  "allowed_writes": [
+    "strategy_lab/live_label_source_acquisition_attempt.py",
+    "strategy_lab/hirssm_v3_74_live_label_source_acquisition_attempt.py",
+    "configs/live_label_source_acquisition_attempt_v3_74.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_74_live_label_source_acquisition_attempt.json",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/",
+    "data_catalog/a_share_live_label_source_acquisition_attempt_v3_74.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_73_higher_quality_label_source_review",
+    "20260529_v3_53_market_total_return_label_importer",
+    "JoinQuant credentials in configs/data_credentials.json"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/provider_readiness.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/probe_plan.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/live_acquisition_attempt.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/joinquant_adjusted_proxy_candidate.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/source_quality_assessment.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/signal_coverage_assessment.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/target_write_decision.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/manual_required_data_interfaces.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/live_label_source_acquisition_attempt_report.md",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/agent_run_manifest.json",
+    "data_catalog/a_share_live_label_source_acquisition_attempt_v3_74.md"
+  ],
+  "forbidden": [
+    "Do not print or persist credentials.",
+    "Do not write data_raw/market_labels/market_total_return_index.csv unless all gates pass and allow_target_write=true.",
+    "Do not treat JoinQuant get_price output as certified total-return evidence.",
+    "Do not generate labels, performance, NAV, Sharpe, drawdown, annualized return, or portfolio-return outputs.",
+    "Do not promote any candidate into a model."
+  ],
+  "acceptance_criteria": [
+    "Provider readiness and live attempt result are recorded.",
+    "Candidate source rows are quality-checked against the V3.53/V3.73 contract.",
+    "Signal-date coverage is checked for all configured horizons.",
+    "If the candidate is short-history or unapproved, target source write is blocked.",
+    "Manual data/API requirements are written if acquisition cannot produce a compliant source."
+  ],
+  "failure_conditions": [
+    "Credentials appear in any output.",
+    "The official target source is written while write_allowed=false.",
+    "Any price-only or unapproved adjusted proxy is claimed as certified total return.",
+    "Any portfolio or model-promotion artifact is generated."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Forbidden performance or promotion output scan returns zero hits.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "If V3.74 cannot produce a compliant source, user or data vendor must provide the total-return/adjusted-market CSV contract before V3.53 can be rerun."
+}

@@ -1,0 +1,36 @@
+{
+  "task_id": "20260529_v3_45_daily_only_data_acceptance",
+  "version": "V3.45",
+  "agent": "data_steward",
+  "objective": "Confirm the daily-only Tushare data collection and processing layer is complete, readable, internally consistent, and protected against raw-close misuse before any model work resumes.",
+  "fixed_inputs": [
+    "configs/daily_only_data_acceptance_v3_45.json",
+    "data_raw/tushare_daily_only/v3_38/daily/",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_dataset_registry.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_quality_report.csv",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/agent_run_manifest.json",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/manual_data_interface_queue.md"
+  ],
+  "outputs": [
+    "outputs/agent_runs/v3_45/daily_only_data_acceptance/file_acceptance_report.csv",
+    "outputs/agent_runs/v3_45/daily_only_data_acceptance/field_integrity_summary.csv",
+    "outputs/agent_runs/v3_45/daily_only_data_acceptance/acceptance_checks.csv",
+    "outputs/agent_runs/v3_45/daily_only_data_acceptance/acceptance_report.md",
+    "outputs/agent_runs/v3_45/daily_only_data_acceptance/self_check.csv",
+    "data_catalog/a_share_daily_only_data_acceptance_v3_45.md"
+  ],
+  "forbidden_actions": [
+    "Do not call any external API.",
+    "Do not run factor validation, model backtests, or portfolio performance analysis.",
+    "Do not reinterpret raw close as adjusted close.",
+    "Do not remove or weaken the manual interface queue."
+  ],
+  "acceptance": [
+    "All expected business-date files exist from 2000-01-01 through 2026-05-28.",
+    "All acquired files are readable and contain required columns.",
+    "No duplicate ts_code/trade_date rows exist in acquired files.",
+    "No acquired files fail OHLCV field checks.",
+    "Registry and quality reports agree with scanned files.",
+    "V3.44 adjustment guard remains passing and adjusted-return research remains blocked."
+  ]
+}

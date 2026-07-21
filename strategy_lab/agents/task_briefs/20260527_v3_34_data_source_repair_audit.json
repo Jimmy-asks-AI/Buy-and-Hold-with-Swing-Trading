@@ -1,0 +1,76 @@
+{
+  "task_id": "20260527_v3_34_data_source_repair_audit",
+  "parent_id": "20260527_v3_33_independent_signal_source_discovery",
+  "version": "V3.34",
+  "assigned_agent": "data_steward",
+  "status": "accepted",
+  "objective": "Audit and repair-plan the data-source blockers raised by V3.33 before any new model harness is opened. Classify local current constituents, latest weights, sample stock QFQ, financial indicators, macro PIT, and index daily data by point-in-time eligibility and downstream restrictions.",
+  "baseline": {
+    "version": "V3.33 Independent Signal Source Discovery",
+    "script": "strategy_lab/hirssm_v3_33_independent_signal_source_discovery.py",
+    "output_dir": "outputs/agent_runs/v3_33/independent_signal_source_discovery",
+    "metrics_to_compare": [
+      "blocked_data_source_count",
+      "implementation_candidate_count",
+      "model_decision"
+    ]
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery/next_research_queue.csv",
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery/data_source_inventory.csv",
+    "data_raw/index/akshare_csindex/",
+    "data_raw/index/akshare_sw_industry/",
+    "data_raw/akshare/daily_qfq/",
+    "data_raw/akshare/financial_indicator/",
+    "data_raw/macro/macro_pit_panel.csv",
+    "data_catalog/"
+  ],
+  "allowed_writes": [
+    "outputs/agent_runs/v3_34/data_source_repair_audit/",
+    "data_catalog/a_share_data_source_repair_audit_v3_34.md",
+    "reports/AGENT_TASK_BOARD.md",
+    "reports/MODEL_DECISION_LOG.md",
+    "reports/AGENT_REVIEW_SUMMARY.md"
+  ],
+  "dependencies": [
+    "20260527_v3_33_independent_signal_source_discovery",
+    "strategy_lab/agents/data_steward/AGENT.md"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_34/data_source_repair_audit/agent_run_manifest.json",
+    "outputs/agent_runs/v3_34/data_source_repair_audit/agent_report.md",
+    "outputs/agent_runs/v3_34/data_source_repair_audit/data_quality_report.csv",
+    "outputs/agent_runs/v3_34/data_source_repair_audit/data_dictionary.csv",
+    "outputs/agent_runs/v3_34/data_source_repair_audit/point_in_time_check.csv",
+    "outputs/agent_runs/v3_34/data_source_repair_audit/data_source_repair_plan.csv",
+    "outputs/agent_runs/v3_34/data_source_repair_audit/self_check.csv"
+  ],
+  "forbidden": [
+    "No portfolio harness or model backtest.",
+    "Do not promote any signal or model.",
+    "Do not approve current constituents or latest weights for historical point-in-time backtests.",
+    "Do not treat QFQ stock samples as broad production-grade stock universe data.",
+    "Do not approve financial indicators without report announcement or available_date fields."
+  ],
+  "acceptance_criteria": [
+    "Every audited dataset has source path, frequency, field coverage, calendar or date range, duplicate check, and status.",
+    "Point-in-time status is explicit for current snapshots, QFQ adjusted prices, financial indicators, macro PIT data, and index daily data.",
+    "Current-only data is blocked or research-only for historical backtests.",
+    "A concrete repair plan names required fields and validation gates for historical constituents, weights, broad stock daily data, financial PIT data, and industry classification history.",
+    "Downstream handoff is to data acquisition or factor researcher only after stronger PIT data exists."
+  ],
+  "failure_conditions": [
+    "Any current snapshot dataset is marked approved for historical backtest.",
+    "Any dataset with missing available_date is approved for fundamentals, valuation, constituents, or weight history.",
+    "The task opens a strategy harness or reports portfolio performance.",
+    "Required output artifacts are missing."
+  ],
+  "quality_gates": [
+    "strict_pit_backtest_allowed must be false for current_index_constituents and latest_index_weights.",
+    "financial_indicator_sample must be blocked or research_only until announcement dates are added.",
+    "stock_daily_qfq_sample must be labelled sample-only and QFQ-adjusted.",
+    "macro_pit_panel must expose available_date before it remains approved for PIT signal validation.",
+    "self_check_pass must be true."
+  ],
+  "next_handoff": "data_steward should hand off a concrete acquisition contract for historical constituents, historical weights, broad stock daily/raw-adjustment data, financial PIT data, and historical industry classification before factor_researcher opens another implementation candidate batch."
+}

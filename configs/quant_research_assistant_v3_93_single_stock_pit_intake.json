@@ -1,0 +1,12 @@
+{
+  "version": "V3.93",
+  "task_id": "20260603_v3_93_single_stock_pit_intake",
+  "asof_date": "2026-05-24",
+  "stock_universe": ["000001", "000002", "000004", "000006", "000007"],
+  "akshare_root": "data_raw/akshare",
+  "tushare_daily_dir": "data_raw/tushare_daily_only/v3_38/daily",
+  "output_dir": "outputs/agent_runs/v3_93/single_stock_pit_intake",
+  "catalog_path": "data_catalog/a_share_single_stock_pit_intake_v3_93.md",
+  "tushare_daily_scan_mode": "full_line_filter",
+  "tushare_max_prefix_rows_per_file": 80
+}

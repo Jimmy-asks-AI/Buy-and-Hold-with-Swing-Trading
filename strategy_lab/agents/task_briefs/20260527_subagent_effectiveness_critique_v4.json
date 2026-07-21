@@ -1,0 +1,79 @@
+{
+  "task_id": "20260527_subagent_effectiveness_critique_v4",
+  "parent_id": "20260527_v3_32_macro_risk_budget_gate",
+  "version": "Governance",
+  "assigned_agent": "chief_quant_orchestrator",
+  "status": "accepted",
+  "objective": "Critically evaluate the multi-agent quant research framework after V3.9-V3.32, quantify model and process effectiveness, and implement reusable governance improvements.",
+  "baseline": {
+    "version": "HIRSSM V3.10 Clean Rank-Vol Core",
+    "script": "strategy_lab/hirssm_v3_10_clean_baseline.py",
+    "output_dir": "outputs/hirssm_v3_10_clean_baseline",
+    "metrics_to_compare": [
+      "annual_return",
+      "sharpe_no_rf",
+      "max_drawdown",
+      "pbo",
+      "annual_delta_vs_v310",
+      "drawdown_delta_vs_v310"
+    ]
+  },
+  "allowed_inputs": [
+    "reports/AGENT_TASK_BOARD.md",
+    "reports/MODEL_DECISION_LOG.md",
+    "reports/AGENT_REVIEW_SUMMARY.md",
+    "strategy_lab/agents",
+    "strategy_lab/agent_framework_check.py",
+    "outputs/agent_runs",
+    "outputs/hirssm_v*_*/candidate_gate_decision.csv",
+    "outputs/hirssm_v*_*/pbo_cscv_summary.csv",
+    "outputs/hirssm_v*_*/nested_oos_performance.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/subagent_effectiveness_review.py",
+    "strategy_lab/agent_framework_check.py",
+    "strategy_lab/agents/AGENT_WORKFLOW.md",
+    "strategy_lab/agents/AGENT_IO_CONTRACT.md",
+    "strategy_lab/agents/task_briefs",
+    "reports/AGENT_FRAMEWORK_EFFECTIVENESS_REVIEW.md",
+    "reports/AGENT_TASK_BOARD.md",
+    "reports/MODEL_DECISION_LOG.md",
+    "reports/AGENT_REVIEW_SUMMARY.md",
+    "outputs/agent_runs/governance/subagent_effectiveness_critique_v4"
+  ],
+  "dependencies": [
+    "20260527_v3_32_macro_risk_budget_gate"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/governance/subagent_effectiveness_critique_v4/agent_report.md",
+    "outputs/agent_runs/governance/subagent_effectiveness_critique_v4/subagent_effectiveness_scorecard.csv",
+    "outputs/agent_runs/governance/subagent_effectiveness_critique_v4/model_iteration_yield.csv",
+    "outputs/agent_runs/governance/subagent_effectiveness_critique_v4/process_defect_log.csv",
+    "outputs/agent_runs/governance/subagent_effectiveness_critique_v4/optimization_backlog.csv",
+    "outputs/agent_runs/governance/subagent_effectiveness_critique_v4/agent_run_manifest.json"
+  ],
+  "forbidden": [
+    "promoting any HIRSSM candidate to default",
+    "changing model weights or thresholds",
+    "rewriting historical task statuses to hide rejected evidence",
+    "treating accepted task status as model promotion"
+  ],
+  "acceptance_criteria": [
+    "framework critique identifies both benefits and structural failures",
+    "model iteration yield is quantified from existing artifacts",
+    "process defects are turned into reusable checks or explicit governance rules",
+    "agent framework self-check passes after changes"
+  ],
+  "failure_conditions": [
+    "missing task brief validation",
+    "missing agent_run_manifest.json",
+    "framework check fails",
+    "report does not separate task acceptance from model promotion"
+  ],
+  "quality_gates": [
+    "python -X utf8 -m py_compile strategy_lab/subagent_effectiveness_review.py",
+    "python -X utf8 strategy_lab/subagent_effectiveness_review.py",
+    "python -X utf8 strategy_lab/agent_framework_check.py"
+  ],
+  "next_handoff": "chief_quant_orchestrator"
+}

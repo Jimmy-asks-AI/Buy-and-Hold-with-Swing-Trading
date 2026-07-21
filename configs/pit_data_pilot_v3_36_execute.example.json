@@ -1,0 +1,37 @@
+{
+  "task_id": "20260527_v3_36_pit_data_pilot_readiness",
+  "execute": true,
+  "allow_network": true,
+  "pilot_output_root": "data_raw/pit_pilot/v3_36",
+  "pilot_index_code": "000300.SH",
+  "pilot_joinquant_index_code": "000300.XSHG",
+  "pilot_index_start_date": "20240101",
+  "pilot_index_end_date": "20241231",
+  "pilot_stock_symbols": [
+    "000001.SZ",
+    "000002.SZ",
+    "600000.SH"
+  ],
+  "pilot_stock_start_date": "20240101",
+  "pilot_stock_end_date": "20241231",
+  "pilot_joinquant_asof_date": "2024-12-31",
+  "tushare_endpoint_throttle_seconds": 65,
+  "tushare_retry_wait_seconds": 65,
+  "tushare_max_retries": 2,
+  "reuse_existing_pilot_outputs": true,
+  "pilot_tasks": [
+    "tushare_stock_basic_all_status",
+    "tushare_index_weight_pilot",
+    "tushare_stock_daily_raw_pilot",
+    "tushare_daily_basic_pilot",
+    "tushare_adj_factor_pilot",
+    "joinquant_index_membership_cross_check"
+  ],
+  "quality_policy": {
+    "no_full_market_execution": true,
+    "require_available_date": true,
+    "pilot_data_is_research_only": true,
+    "forbid_current_snapshot_backfill": true,
+    "separate_raw_adjusted_prices": true
+  }
+}

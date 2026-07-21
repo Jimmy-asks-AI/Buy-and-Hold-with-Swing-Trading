@@ -1,0 +1,44 @@
+{
+  "task_id": "20260529_v3_60_state_stratified_proxy_validation",
+  "signal_panel_path": "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+  "label_path": "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+  "v3_59_manifest_path": "outputs/agent_runs/v3_59/market_price_proxy_label_importer/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_60/state_stratified_proxy_validation",
+  "catalog_path": "data_catalog/a_share_state_stratified_proxy_validation_v3_60.md",
+  "horizons": [1, 5, 20, 60],
+  "state_columns": [
+    "composite_state",
+    "liquidity_state",
+    "breadth_state",
+    "activity_state",
+    "concentration_state",
+    "limit_crowding_state"
+  ],
+  "minimums": {
+    "joined_rows": 200000,
+    "signal_observations": 4500,
+    "state_observations": 200
+  },
+  "validation": {
+    "top_quantile": 0.8,
+    "bottom_quantile": 0.2,
+    "min_abs_proxy_spearman": 0.03,
+    "min_proxy_qspread": 0.0,
+    "min_top_directional_alignment": 0.52,
+    "negative_control_shift": 252
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+    "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+    "outputs/agent_runs/v3_59/market_price_proxy_label_importer/agent_run_manifest.json"
+  ],
+  "forbidden_now": [
+    "write_official_market_total_return_source",
+    "write_official_total_return_labels",
+    "run_portfolio_backtest",
+    "write_nav",
+    "model_promotion",
+    "default_enablement",
+    "claim_total_return_performance"
+  ]
+}

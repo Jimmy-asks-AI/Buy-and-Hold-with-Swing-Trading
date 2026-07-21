@@ -1,0 +1,52 @@
+{
+  "schema_version": "legacy_governance_debt_allowlist.v1",
+  "enabled": true,
+  "owner": "code_quality_engineer",
+  "created_by_task": "20260601_v3_84_legacy_governance_debt_gate",
+  "rationale": "V3.38-V3.56 were generated before the strict task brief and agent run manifest schemas became mandatory. Their historical schema debt is preserved as audit evidence instead of being silently rewritten.",
+  "policy": {
+    "exact_path_match_only": true,
+    "do_not_add_new_tasks": true,
+    "allowed_scope": "schema-shape and task-board-registration errors from pre-V3.57 legacy artifacts only",
+    "not_allowed_scope": "missing physical files, invalid JSON, new task briefs, new manifests, model promotion evidence, or any V3.57+ artifact"
+  },
+  "legacy_task_brief_paths": [
+    "strategy_lab/agents/task_briefs/20260528_v3_38_daily_only_permission_profile.json",
+    "strategy_lab/agents/task_briefs/20260528_v3_39_daily_only_expand_300.json",
+    "strategy_lab/agents/task_briefs/20260528_v3_40_daily_only_expand_500.json",
+    "strategy_lab/agents/task_briefs/20260528_v3_41_daily_only_expand_1000.json",
+    "strategy_lab/agents/task_briefs/20260528_v3_42_daily_only_expand_1500.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_43_daily_only_complete.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_44_raw_daily_adjustment_guard.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_45_daily_only_data_acceptance.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_45_1_daily_only_data_acceptance_quarantine.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_46_accepted_daily_only_adapter.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_47_daily_only_feature_layer.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_48_daily_only_state_monitor.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_49_state_stratified_validation_framework.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_50_candidate_signal_registry.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_51_adjusted_pit_label_layer.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_52_market_label_source_audit.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_53_market_total_return_label_importer.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_54_market_total_return_source_acquirer.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_55_joinquant_market_proxy_probe.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_56_limited_proxy_label_chain_test.json"
+  ],
+  "legacy_agent_run_manifest_paths": [
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/agent_run_manifest.json",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/agent_run_manifest.json",
+    "outputs/agent_runs/v3_45/daily_only_data_acceptance/agent_run_manifest.json",
+    "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/agent_run_manifest.json",
+    "outputs/agent_runs/v3_46/accepted_daily_only_adapter/agent_run_manifest.json",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/agent_run_manifest.json",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/agent_run_manifest.json",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/agent_run_manifest.json",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/agent_run_manifest.json",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/agent_run_manifest.json",
+    "outputs/agent_runs/v3_52/market_label_source_audit/agent_run_manifest.json",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/agent_run_manifest.json",
+    "outputs/agent_runs/v3_54/market_total_return_source_acquirer/agent_run_manifest.json",
+    "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/agent_run_manifest.json",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/agent_run_manifest.json"
+  ]
+}

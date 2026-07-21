@@ -1,0 +1,58 @@
+{
+  "task_id": "20260529_v3_72_strict_proxy_candidate_review",
+  "v3_71_manifest_path": "outputs/agent_runs/v3_71/guarded_feature_label_validation/agent_run_manifest.json",
+  "v3_71_summary_path": "outputs/agent_runs/v3_71/guarded_feature_label_validation/feature_horizon_summary.csv",
+  "v3_71_candidate_decision_path": "outputs/agent_runs/v3_71/guarded_feature_label_validation/candidate_decision.csv",
+  "v3_71_walk_forward_path": "outputs/agent_runs/v3_71/guarded_feature_label_validation/walk_forward_feature_results.csv",
+  "combined_panel_path": "outputs/agent_runs/v3_70/combined_feature_registry/combined_feature_panel.csv",
+  "primary_label_path": "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+  "cross_index_paths": {
+    "000300": "data_raw/index/akshare_csindex/daily_csindex/000300.csv",
+    "000905": "data_raw/index/akshare_csindex/daily_csindex/000905.csv",
+    "000985": "data_raw/index/akshare_csindex/daily_csindex/000985.csv"
+  },
+  "output_dir": "outputs/agent_runs/v3_72/strict_proxy_candidate_review",
+  "catalog_path": "data_catalog/a_share_strict_proxy_candidate_review_v3_72.md",
+  "horizons": [1, 5, 20, 60],
+  "trend_windows": [20, 60, 120],
+  "bucket_validation": {
+    "top_quantile": 0.8,
+    "bottom_quantile": 0.2
+  },
+  "negative_control_shifts": [21, 63, 126],
+  "thresholds": {
+    "correlation_cluster_threshold": 0.9,
+    "min_cluster_score_gap": 0.0,
+    "negative_control_ratio_threshold": 0.8,
+    "negative_control_abs_threshold": 0.02,
+    "min_cross_index_observations": 4500,
+    "min_cross_index_signed_spearman": 0.0,
+    "min_cross_index_signed_qspread": 0.0,
+    "min_cross_index_year_positive_share": 0.55,
+    "min_cross_index_pass_count": 2,
+    "market_trend_proxy_corr_threshold": 0.65
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/agent_run_manifest.json",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/feature_horizon_summary.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/candidate_decision.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/walk_forward_feature_results.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/combined_feature_panel.csv",
+    "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000300.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000905.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000985.csv"
+  ],
+  "forbidden_now": [
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "write_annualized_return",
+    "write_portfolio_return",
+    "model_promotion",
+    "default_enablement",
+    "official_total_return_claim",
+    "treat_proxy_as_investable_performance"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "task_id": "20260529_v3_53_market_total_return_label_importer",
+  "version": "V3.53",
+  "role": "market_label_import_engineer",
+  "objective": "Implement a strict importer for MARKET total-return index data and build V3.51-compatible forward labels only when the source passes all gates.",
+  "fixed_inputs": [
+    "configs/market_total_return_label_importer_v3_53.json",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+    "outputs/agent_runs/v3_52/market_label_source_audit/market_label_acquisition_plan.csv",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "outputs": [
+    "strategy_lab/market_total_return_label_importer.py",
+    "strategy_lab/hirssm_v3_53_market_total_return_label_importer.py",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/market_total_return_source_contract.csv",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/market_total_return_index.template.csv",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/source_validation_checks.csv",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/market_forward_label_schema.csv",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/market_label_import_readiness_checks.csv",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/no_label_guard.csv",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/market_total_return_import_report.md",
+    "data_catalog/a_share_market_total_return_label_importer_v3_53.md"
+  ],
+  "forbidden": [
+    "Do not accept strategy NAV, benchmark NAV, or backtest-derived outputs as labels.",
+    "Do not accept price-only index close as total-return labels.",
+    "Do not compute labels when the source file is missing or fails validation.",
+    "Do not run IC, hit rate, backtest metrics, NAV, drawdown, Sharpe, or model promotion.",
+    "Do not call network APIs."
+  ],
+  "acceptance": [
+    "The importer must write a strict source contract and a manual CSV template.",
+    "Missing or invalid source files must block label generation.",
+    "Valid source files must be able to generate V3.51-compatible MARKET forward labels.",
+    "All generated labels must include signal_date, asset, horizon, forward_adjusted_return, return_basis, label_available_date, and price_adjustment_source.",
+    "The report must separate importer readiness from performance validation."
+  ]
+}

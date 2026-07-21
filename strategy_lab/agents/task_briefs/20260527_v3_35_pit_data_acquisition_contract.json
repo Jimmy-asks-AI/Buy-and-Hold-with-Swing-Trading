@@ -1,0 +1,79 @@
+{
+  "task_id": "20260527_v3_35_pit_data_acquisition_contract",
+  "parent_id": "20260527_v3_34_data_source_repair_audit",
+  "version": "V3.35",
+  "assigned_agent": "data_steward",
+  "status": "accepted",
+  "objective": "Create a production-grade point-in-time data acquisition contract and dry-run harvester plan for historical index constituents/weights and broad A-share stock daily raw/adjusted data before any new factor or model harness is opened.",
+  "baseline": {
+    "version": "V3.34 Data Source Repair Audit",
+    "script": "strategy_lab/hirssm_v3_34_data_source_repair_audit.py",
+    "output_dir": "outputs/agent_runs/v3_34/data_source_repair_audit",
+    "metrics_to_compare": [
+      "repair_queue_count",
+      "strict_pit_approved_count",
+      "model_decision"
+    ]
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_34/data_source_repair_audit/data_source_repair_plan.csv",
+    "outputs/agent_runs/v3_34/data_source_repair_audit/point_in_time_check.csv",
+    "data_raw/akshare/stock_list/stock_info_a_code_name.csv",
+    "data_raw/akshare/calendar/trade_calendar.csv",
+    "configs/data_credentials.example.json",
+    "data_catalog/"
+  ],
+  "allowed_writes": [
+    "configs/pit_data_acquisition_v3_35.json",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/",
+    "data_catalog/a_share_pit_data_acquisition_contract_v3_35.md",
+    "reports/AGENT_TASK_BOARD.md",
+    "reports/MODEL_DECISION_LOG.md",
+    "reports/AGENT_REVIEW_SUMMARY.md"
+  ],
+  "dependencies": [
+    "20260527_v3_34_data_source_repair_audit",
+    "strategy_lab/agents/data_steward/AGENT.md"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/agent_run_manifest.json",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/agent_report.md",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/acquisition_contract.csv",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/provider_endpoint_map.csv",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/harvest_plan.csv",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/credential_readiness.csv",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/data_quality_report.csv",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/data_dictionary.csv",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/point_in_time_check.csv",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/self_check.csv"
+  ],
+  "forbidden": [
+    "No portfolio harness or strategy backtest.",
+    "No model promotion or signal promotion.",
+    "Do not write real credentials to repository files or reports.",
+    "Do not scrape browser login cookies into API credentials.",
+    "Do not mark dry-run plans as acquired data.",
+    "Do not approve historical constituents/weights until actual dated vintages pass PIT validation."
+  ],
+  "acceptance_criteria": [
+    "The contract contains dataset, provider, endpoint, required fields, output path, availability rule, and PIT validation gates.",
+    "Priority 1 covers historical index constituents/weights.",
+    "Priority 2 covers broad stock daily raw bars, daily basic data, adjustment factors, listing status, pause/ST/limit flags, and delisted names.",
+    "Dry-run readiness clearly reports missing SDKs or credentials without revealing secrets.",
+    "The task emits a next executable handoff without running model code."
+  ],
+  "failure_conditions": [
+    "Any dataset is described as acquired when only dry-run was executed.",
+    "Credentials or tokens appear in output files.",
+    "Current snapshots are approved as historical data.",
+    "Required output artifacts are missing."
+  ],
+  "quality_gates": [
+    "available_date or effective_date is mandatory for historical constituents, weights, financials, and classifications.",
+    "raw_close, adjusted_close, and adj_factor must be separated for stock daily data.",
+    "stock universe must include listed, delisted, and paused names when provider supports them.",
+    "dry_run_mode must be true for this task run.",
+    "self_check_pass must be true."
+  ],
+  "next_handoff": "If credentials and SDKs are available, data_steward may run the harvester in execute mode for a small pilot batch first; otherwise the next task is credential/SDK setup, not factor research."
+}

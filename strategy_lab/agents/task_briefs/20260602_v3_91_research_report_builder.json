@@ -1,0 +1,23 @@
+{
+  "task_id": "20260602_v3_91_research_report_builder",
+  "parent_id": "20260602_v3_90_research_view_synthesizer",
+  "version": "V3.91",
+  "assigned_agent": "research_reporter",
+  "status": "accepted",
+  "objective": "Render the synthesized research views into markdown and static HTML reports.",
+  "baseline": {
+    "version": "V3.90",
+    "script": "strategy_lab/hirssm_v3_86_to_v3_92_quant_research_assistant.py",
+    "output_dir": "outputs/agent_runs/v3_90/research_view_synthesizer/",
+    "metrics_to_compare": ["object_count", "bullish_count", "bearish_count"]
+  },
+  "allowed_inputs": ["outputs/agent_runs/v3_90/research_view_synthesizer/", "outputs/agent_runs/v3_89/fundamental_factor_engine/"],
+  "allowed_writes": ["outputs/agent_runs/v3_91/research_report_builder/"],
+  "dependencies": ["20260602_v3_90_research_view_synthesizer"],
+  "required_outputs": ["research_report.md", "quant_research_dashboard.html", "html_static_check.csv", "report_content_check.csv", "dashboard_content_check.csv", "agent_run_manifest.json"],
+  "forbidden": ["Do not use high-conviction wording for low-confidence views.", "Do not create a marketing landing page.", "Do not omit research-only/no-order/no-backtest boundaries.", "Do not hide hard-conflict or confidence-cap reasons."],
+  "acceptance_criteria": ["Markdown report exists.", "HTML includes responsive viewport metadata.", "Data-gap state is visible.", "Macro PIT state is visible.", "Research-only boundaries are visible.", "Hard conflicts and confidence-cap reasons are visible.", "Static HTML and content checks pass."],
+  "failure_conditions": ["HTML missing view summary.", "Report omits limitations.", "Visible layer omits V3.90 conflict neutralization.", "Dashboard implies a trade/order/portfolio instruction."],
+  "quality_gates": ["HTML file exists.", "Static structure checked.", "HTML static check CSV exists.", "Report content check CSV exists.", "Dashboard content check CSV exists.", "Manifest paths exist."],
+  "next_handoff": "backtest_validation_auditor"
+}

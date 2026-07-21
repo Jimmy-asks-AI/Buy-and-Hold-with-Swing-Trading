@@ -1,0 +1,39 @@
+{
+  "task_id": "20260529_v3_49_state_stratified_validation_framework",
+  "version": "V3.49",
+  "role": "validation_governance_engineer",
+  "objective": "Create a state-stratified validation framework that uses V3.48 diagnostic states as future validation strata while blocking performance claims until adjusted/PIT return labels and signal panels are available.",
+  "fixed_inputs": [
+    "configs/state_stratified_validation_v3_49.json",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/agent_run_manifest.json"
+  ],
+  "outputs": [
+    "strategy_lab/state_stratified_validation_framework.py",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/state_coverage_summary.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/state_stratification_plan.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/signal_panel_contract.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/adjusted_pit_label_contract.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/validation_metric_contract.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/negative_control_plan.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/readiness_checks.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/no_result_guard.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/framework_report.md",
+    "data_catalog/a_share_state_stratified_validation_framework_v3_49.md"
+  ],
+  "forbidden": [
+    "Do not read raw daily CSVs.",
+    "Do not compute forward returns from unadjusted raw close.",
+    "Do not create signal performance metrics without adjusted/PIT labels.",
+    "Do not run a portfolio backtest.",
+    "Do not promote any state tag into a trading model."
+  ],
+  "acceptance": [
+    "State panel schema must pass.",
+    "State coverage and stratification plan must be generated.",
+    "Signal and label contracts must be explicit.",
+    "Readiness must mark performance validation as blocked when labels are missing.",
+    "No result guard must show no performance/backtest output was produced.",
+    "The final report must separate framework readiness from performance readiness."
+  ]
+}

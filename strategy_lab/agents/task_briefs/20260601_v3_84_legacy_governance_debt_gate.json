@@ -1,0 +1,82 @@
+{
+  "task_id": "20260601_v3_84_legacy_governance_debt_gate",
+  "parent_id": "20260601_v3_83_market_label_real_sample_ops_pack",
+  "version": "V3.84",
+  "assigned_agent": "code_quality_engineer",
+  "status": "ready",
+  "objective": "Restore the global agent framework check as a usable strict gate by converting pre-strict-schema V3.38-V3.56 task brief and manifest debt into an explicit exact-path legacy allowlist while keeping all new work strict.",
+  "baseline": {
+    "version": "V3.83",
+    "script": "strategy_lab/hirssm_v3_84_legacy_governance_debt_gate.py",
+    "output_dir": "outputs/agent_runs/v3_84/legacy_governance_debt_gate",
+    "metrics_to_compare": [
+      "framework_self_check_pass",
+      "raw_error_count",
+      "active_error_count",
+      "legacy_debt_count",
+      "legacy_debt_path_count",
+      "allowlist_path_count"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/legacy_governance_debt_gate_v3_84.json",
+    "strategy_lab/agent_framework_check.py",
+    "strategy_lab/agents/_templates/task_brief.schema.json",
+    "strategy_lab/agents/_templates/agent_run_manifest.schema.json",
+    "reports/AGENT_TASK_BOARD.md",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/agent_run_manifest.json"
+  ],
+  "allowed_writes": [
+    "strategy_lab/agent_framework_check.py",
+    "strategy_lab/agents/_templates/legacy_governance_debt_allowlist.json",
+    "strategy_lab/hirssm_v3_84_legacy_governance_debt_gate.py",
+    "configs/legacy_governance_debt_gate_v3_84.json",
+    "strategy_lab/agents/task_briefs/20260601_v3_84_legacy_governance_debt_gate.json",
+    "outputs/agent_runs/v3_84/legacy_governance_debt_gate/",
+    "data_catalog/a_share_legacy_governance_debt_gate_v3_84.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260601_v3_83_market_label_real_sample_ops_pack",
+    "20260527_subagent_iteration_guardrails_v2",
+    "20260527_subagent_iteration_guardrails_v3"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_84/legacy_governance_debt_gate/framework_check_result.json",
+    "outputs/agent_runs/v3_84/legacy_governance_debt_gate/legacy_debt_summary.csv",
+    "outputs/agent_runs/v3_84/legacy_governance_debt_gate/active_errors.csv",
+    "outputs/agent_runs/v3_84/legacy_governance_debt_gate/acceptance_checks.csv",
+    "outputs/agent_runs/v3_84/legacy_governance_debt_gate/legacy_governance_debt_gate_report.md",
+    "outputs/agent_runs/v3_84/legacy_governance_debt_gate/agent_run_manifest.json",
+    "data_catalog/a_share_legacy_governance_debt_gate_v3_84.md"
+  ],
+  "forbidden": [
+    "Do not weaken schema checks globally.",
+    "Do not add wildcard legacy suppressions.",
+    "Do not suppress V3.57+ task brief or manifest errors.",
+    "Do not repair old artifacts by inventing missing evidence.",
+    "Do not run label generation, portfolio validation, NAV, Sharpe, drawdown, annualized return, or model promotion outputs."
+  ],
+  "acceptance_criteria": [
+    "agent_framework_check.py returns self_check_pass=true.",
+    "active_errors.csv is empty.",
+    "legacy_debt_summary.csv records the pre-strict-schema debt count and exact paths.",
+    "Allowlist uses exact path matching only.",
+    "V3.84 manifest and self-check pass."
+  ],
+  "failure_conditions": [
+    "A non-allowlisted error is filtered.",
+    "A wildcard or broad prefix suppression is introduced.",
+    "Any V3.57+ artifact is allowlisted.",
+    "Any model, label, portfolio, or promotion artifact is generated.",
+    "Any credential appears in outputs."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "agent_framework_check.py exits 0.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "Use agent_framework_check.py as the active global gate for all new work; migrate or archive legacy allowlist entries only with explicit evidence."
+}

@@ -1,0 +1,23 @@
+{
+  "task_id": "20260602_v3_88_technical_signal_engine",
+  "parent_id": "20260602_v3_87_research_object_schema",
+  "version": "V3.88",
+  "assigned_agent": "technical_market_analyst",
+  "status": "accepted",
+  "objective": "Build a technical analysis engine for object-level trend, momentum, drawdown repair, volatility, and liquidity evidence.",
+  "baseline": {
+    "version": "V3.87",
+    "script": "strategy_lab/hirssm_v3_86_to_v3_92_quant_research_assistant.py",
+    "output_dir": "outputs/agent_runs/v3_87/research_object_schema/",
+    "metrics_to_compare": ["object_count", "usable_price_count"]
+  },
+  "allowed_inputs": ["outputs/agent_runs/v3_87/research_object_schema/sample_research_universe.csv", "data_raw/index/"],
+  "allowed_writes": ["outputs/agent_runs/v3_88/technical_signal_engine/"],
+  "dependencies": ["20260602_v3_87_research_object_schema"],
+  "required_outputs": ["technical_signal_latest.csv", "technical_signal_panel.csv", "technical_formula_spec.csv", "technical_input_contract_check.csv", "technical_method_note.md", "agent_run_manifest.json"],
+  "forbidden": ["Do not use forward return labels.", "Do not tune thresholds on the sample outcome."],
+  "acceptance_criteria": ["One latest technical row per object.", "Latest rows match the V3.87 research object contract.", "Scores are bounded from 0 to 1.", "Volatility context is structured as risk/confidence evidence.", "No forward-label columns exist.", "Formula components and weights are reproducible."],
+  "failure_conditions": ["Empty technical panel.", "V3.87 universe and V3.88 latest rows do not match.", "Unbounded or NaN latest score for usable objects.", "Volatility is claimed but not present in structured output."],
+  "quality_gates": ["CSV files parse.", "No forward label columns.", "Directional formula weights sum to one.", "Input contract check has no fail rows.", "Manifest paths exist."],
+  "next_handoff": "fundamental_equity_analyst"
+}

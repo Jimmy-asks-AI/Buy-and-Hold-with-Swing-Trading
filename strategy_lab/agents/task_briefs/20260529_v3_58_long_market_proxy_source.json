@@ -1,0 +1,76 @@
+{
+  "task_id": "20260529_v3_58_long_market_proxy_source",
+  "parent_id": "20260529_v3_57_limited_proxy_state_diagnostic",
+  "version": "V3.58",
+  "assigned_agent": "data_steward",
+  "status": "ready",
+  "objective": "Normalize a full-history local CSIndex 000985 daily series into a governed MARKET price-index proxy without claiming total-return evidence.",
+  "baseline": {
+    "version": "V3.57",
+    "script": "strategy_lab/hirssm_v3_57_limited_proxy_state_diagnostic.py",
+    "output_dir": "outputs/agent_runs/v3_57/limited_proxy_state_diagnostic",
+    "metrics_to_compare": [
+      "state_rows",
+      "joined_rows",
+      "performance_validation_status"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/long_market_proxy_source_v3_58.json",
+    "data_raw/index/akshare_csindex/daily_csindex/000985.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000300.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000905.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000016.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000015.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/long_market_proxy_source.py",
+    "strategy_lab/hirssm_v3_58_long_market_proxy_source.py",
+    "configs/long_market_proxy_source_v3_58.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_58_long_market_proxy_source.json",
+    "outputs/agent_runs/v3_58/long_market_proxy_source/",
+    "data_raw/market_labels/market_price_index_proxy_000985.csv",
+    "data_catalog/a_share_long_market_proxy_source_v3_58.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_57_limited_proxy_state_diagnostic"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_58/long_market_proxy_source/candidate_index_source_audit.csv",
+    "outputs/agent_runs/v3_58/long_market_proxy_source/market_price_proxy_000985.csv",
+    "data_raw/market_labels/market_price_index_proxy_000985.csv",
+    "outputs/agent_runs/v3_58/long_market_proxy_source/source_contract_checks.csv",
+    "outputs/agent_runs/v3_58/long_market_proxy_source/write_policy.csv",
+    "outputs/agent_runs/v3_58/long_market_proxy_source/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_58/long_market_proxy_source/long_market_proxy_source_report.md",
+    "outputs/agent_runs/v3_58/long_market_proxy_source/agent_run_manifest.json",
+    "data_catalog/a_share_long_market_proxy_source_v3_58.md"
+  ],
+  "forbidden": [
+    "Do not write data_raw/market_labels/market_total_return_index.csv.",
+    "Do not describe the CSIndex close series as an official total-return index.",
+    "Do not run IC, RankIC, hit rate, state performance validation, portfolio backtest, NAV, Sharpe, annualized return, or model promotion.",
+    "Do not claim dividend-inclusive or investable total-return performance from a price-index proxy."
+  ],
+  "acceptance_criteria": [
+    "Primary 000985 proxy has at least 5000 regular trading rows.",
+    "Primary 000985 proxy starts no later than 20050104 and ends no earlier than 20260501.",
+    "The written proxy file clearly marks return_basis_candidate as price_index_return.",
+    "Official total-return source remains absent and untouched.",
+    "Performance validation remains blocked."
+  ],
+  "failure_conditions": [
+    "The official total-return file is created.",
+    "The proxy file omits the price-index/not-total-return governance fields.",
+    "Any performance metric output is produced.",
+    "Any credential appears outside configs/data_credentials.json."
+  ],
+  "quality_gates": [
+    "AST, JSON, and import checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json records price_index_proxy_not_total_return.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "backtest_validation_auditor may implement V3.59 guarded price-proxy label importer only as a separate non-official validation track."
+}

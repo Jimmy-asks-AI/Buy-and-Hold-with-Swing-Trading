@@ -1,0 +1,25 @@
+{
+  "schema_version": "security_code_lineage_v1_1",
+  "code_migrations": [
+    {
+      "predecessor": "300114",
+      "successor": "302132",
+      "effective_date": "2025-02-17",
+      "predecessor_end_date": "2025-02-14",
+      "successor_start_date": "2025-02-17",
+      "identity_continuity": true,
+      "evidence_url": "https://static.cninfo.com.cn/finalpage/2025-02-15/1222544408.PDF",
+      "reason": "official code migration; legal listed entity and rights continue"
+    },
+    {
+      "predecessor": "600849",
+      "successor": "601607",
+      "effective_date": "2010-03-05",
+      "predecessor_end_date": "2010-03-08",
+      "successor_start_date": "2010-03-09",
+      "identity_continuity": true,
+      "evidence_url": "https://static.sse.com.cn/cs/zhs/scfw/gg/ssgs/2011-03-09/601607_2010_n.pdf",
+      "reason": "official code migration; successor resumed trading under the new code"
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "task_id": "20260602_v3_85_market_label_real_sample_dry_run_harness",
+  "parent_id": "20260601_v3_84_legacy_governance_debt_gate",
+  "version": "V3.85",
+  "assigned_agent": "backtest_validation_auditor",
+  "status": "ready",
+  "objective": "Build and run a sandbox dry-run harness that proves the real MARKET sample intake plumbing from V3.83 operator handoff through V3.80 raw registry, V3.82 controlled routing, and controlled V3.78 validation without writing real data_raw paths, official target source, labels, portfolio outputs, or model promotion evidence.",
+  "baseline": {
+    "version": "V3.84",
+    "script": "strategy_lab/hirssm_v3_85_market_label_real_sample_dry_run_harness.py",
+    "output_dir": "outputs/agent_runs/v3_85/real_sample_intake_dry_run",
+    "metrics_to_compare": [
+      "dry_run_sample_rows",
+      "v3_80_stage1_review_allowed_count",
+      "v3_80_stage2_review_allowed_count",
+      "v3_82_eligible_sample_count",
+      "controlled_v3_78_config_count",
+      "controlled_v3_78_pass_count",
+      "real_target_source_state_unchanged"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/market_label_real_sample_dry_run_harness_v3_85.json",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/agent_run_manifest.json",
+    "outputs/agent_runs/v3_84/legacy_governance_debt_gate/agent_run_manifest.json",
+    "configs/market_label_sample_intake_validator_v3_78.json",
+    "configs/market_label_raw_sample_registry_v3_80.json",
+    "configs/market_label_registered_sample_intake_orchestrator_v3_82.json",
+    "strategy_lab/market_label_raw_sample_registry.py",
+    "strategy_lab/market_label_registered_sample_intake_orchestrator.py",
+    "strategy_lab/market_label_sample_intake_validator.py",
+    "data_raw/market_labels/incoming_samples",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/market_label_real_sample_dry_run_harness.py",
+    "strategy_lab/hirssm_v3_85_market_label_real_sample_dry_run_harness.py",
+    "configs/market_label_real_sample_dry_run_harness_v3_85.json",
+    "strategy_lab/agents/task_briefs/20260602_v3_85_market_label_real_sample_dry_run_harness.json",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/",
+    "data_catalog/a_share_real_sample_intake_dry_run_v3_85.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260601_v3_83_market_label_real_sample_ops_pack",
+    "20260601_v3_84_legacy_governance_debt_gate",
+    "20260601_v3_80_market_label_raw_sample_registry",
+    "20260601_v3_82_market_label_registered_sample_intake_orchestrator",
+    "20260601_v3_78_market_label_sample_intake_validator"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/v3_80_stage1_registry_without_license.csv",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/v3_80_stage2_registry_with_license.csv",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/v3_82_controlled_v3_78_plan.csv",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/v3_78_execution_results.csv",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/v3_78_candidate_file_decision.csv",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/dry_run_pipeline_trace.csv",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/no_execution_guard.csv",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/acceptance_checks.csv",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/real_sample_intake_dry_run_report.md",
+    "outputs/agent_runs/v3_85/real_sample_intake_dry_run/agent_run_manifest.json",
+    "data_catalog/a_share_real_sample_intake_dry_run_v3_85.md"
+  ],
+  "forbidden": [
+    "Do not create data_raw/market_labels/incoming_samples.",
+    "Do not copy, move, or edit real raw provider samples.",
+    "Do not write data_raw/market_labels/incoming_samples/license_review_status.csv.",
+    "Do not write data_raw/market_labels/market_total_return_index.csv.",
+    "Do not run V3.53, label generation, portfolio validation, NAV, Sharpe, drawdown, annualized return, or model promotion outputs.",
+    "Do not treat synthetic dry-run data as market evidence."
+  ],
+  "acceptance_criteria": [
+    "V3.80 dry-run registry blocks review before sandbox license status is written.",
+    "V3.80 dry-run registry allows review after sandbox license status is written.",
+    "V3.82 creates at least one controlled V3.78 config from the sandbox registry.",
+    "Controlled V3.78 validation executes in the sandbox and passes candidate-file intake.",
+    "Real incoming directory and official target source state are unchanged.",
+    "Global agent framework check remains passing after V3.85."
+  ],
+  "failure_conditions": [
+    "Any real data_raw path is created or written by this task.",
+    "Synthetic dry-run data is written to the official target source.",
+    "A controlled V3.78 config is generated without V3.80 license approval.",
+    "Any V3.53, label, portfolio, or model-promotion output is generated.",
+    "Any credential appears in outputs."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "V3.85 runner self_check.csv passes.",
+    "Controlled V3.78 manifest self_check_pass is true.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "agent_framework_check.py exits 0 after V3.85.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "Use the same chain with a real licensed provider sample: V3.83 operator pack, V3.80 registry, V3.82 route plan, controlled V3.78 validation, then V3.75/V3.76 before any V3.53 importer."
+}

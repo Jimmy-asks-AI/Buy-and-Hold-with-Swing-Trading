@@ -1,0 +1,32 @@
+{
+  "task_id": "20260529_v3_46_accepted_daily_only_adapter",
+  "data_root": "data_raw/tushare_daily_only/v3_38/daily",
+  "quarantine_path": "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/ohlc_quarantine_rows.csv",
+  "processed_scope_summary_path": "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/processed_scope_summary.csv",
+  "guard_manifest_path": "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/agent_run_manifest.json",
+  "acceptance_manifest_path": "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_46/accepted_daily_only_adapter",
+  "catalog_path": "data_catalog/a_share_accepted_daily_only_adapter_v3_46.md",
+  "sample_dates": [
+    "20140618",
+    "20140728",
+    "20260528"
+  ],
+  "blocked_capabilities_to_test": [
+    "adjusted_return",
+    "total_return",
+    "valuation",
+    "portfolio_backtest_performance",
+    "dividend_yield"
+  ],
+  "blocked_portfolio_return_basis_to_test": [
+    "adjusted_return",
+    "total_return"
+  ],
+  "allowed_capabilities_to_test": [
+    "raw_ohlcv",
+    "liquidity_screening",
+    "volume_activity_state",
+    "coverage_check"
+  ]
+}

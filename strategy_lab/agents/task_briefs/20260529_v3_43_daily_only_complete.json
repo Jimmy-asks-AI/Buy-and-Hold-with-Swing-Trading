@@ -1,0 +1,38 @@
+{
+  "task_id": "20260529_v3_43_daily_only_complete",
+  "version": "V3.43",
+  "agent": "data_steward",
+  "objective": "Complete the Tushare daily-only raw daily acquisition from 2000-01-01 through 2026-05-28 using cache/resume after the interrupted V3.42 run.",
+  "fixed_inputs": [
+    "configs/data_credentials.json",
+    "configs/daily_only_permission_v3_43_complete.json",
+    "strategy_lab/hirssm_v3_38_daily_only_permission_profile.py",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/manual_data_interface_queue.md"
+  ],
+  "outputs": [
+    "data_raw/tushare_daily_only/v3_38/daily/trade_date=YYYYMMDD.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_harvest_log.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_quality_report.csv",
+    "outputs/agent_runs/v3_43/daily_only_complete/completion_summary.md"
+  ],
+  "manual_data_interfaces_still_needed": [
+    "adj_factor",
+    "stock_basic",
+    "daily_basic",
+    "index_weight",
+    "index_dailybasic"
+  ],
+  "forbidden_actions": [
+    "Do not call endpoints other than tushare.daily.",
+    "Do not run adjusted-return, valuation, PIT constituent, factor, or portfolio research.",
+    "Do not delete existing daily files; use cache/resume only.",
+    "Do not remove or weaken the manual interface queue."
+  ],
+  "acceptance": [
+    "All business-date outputs from 2000-01-01 through 2026-05-28 are either acquired/cached with rows or explicitly empty.",
+    "No queued_after_max_new_trade_dates rows remain.",
+    "All acquired dates pass duplicate and OHLCV quality checks or are explicitly reported.",
+    "The manual data interface queue remains available.",
+    "The run produces a completion summary with coverage, row counts, error counts, empty-date counts, and remaining queued dates."
+  ]
+}

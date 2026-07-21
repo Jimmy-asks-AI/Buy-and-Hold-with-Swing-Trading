@@ -1,0 +1,45 @@
+{
+  "task_id": "20260529_v3_64_narrow_walk_forward_proxy_review",
+  "joined_panel_path": "outputs/agent_runs/v3_63/lag_safe_proxy_validation/joined_lag_safe_proxy_panel.csv",
+  "candidate_decision_path": "outputs/agent_runs/v3_63/lag_safe_proxy_validation/candidate_validation_decision.csv",
+  "v3_63_manifest_path": "outputs/agent_runs/v3_63/lag_safe_proxy_validation/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review",
+  "catalog_path": "data_catalog/a_share_narrow_walk_forward_proxy_review_v3_64.md",
+  "walk_forward": {
+    "train_years": 5,
+    "test_years": 1,
+    "min_train_observations": 900,
+    "min_test_observations": 120
+  },
+  "gate_thresholds": {
+    "min_proxy_spearman": 0.03,
+    "min_proxy_qspread": 0.0,
+    "min_top_directional_alignment": 0.52
+  },
+  "decision_thresholds": {
+    "min_gated_windows": 8,
+    "min_oos_pass_rate": 0.55,
+    "min_oos_median_spearman": 0.02,
+    "min_oos_positive_qspread_share": 0.60
+  },
+  "bucket_validation": {
+    "top_quantile": 0.8,
+    "bottom_quantile": 0.2
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_63/lag_safe_proxy_validation/joined_lag_safe_proxy_panel.csv",
+    "outputs/agent_runs/v3_63/lag_safe_proxy_validation/candidate_validation_decision.csv",
+    "outputs/agent_runs/v3_63/lag_safe_proxy_validation/agent_run_manifest.json"
+  ],
+  "forbidden_now": [
+    "write_official_market_total_return_source",
+    "write_official_total_return_labels",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "model_promotion",
+    "default_enablement",
+    "claim_total_return_performance"
+  ]
+}

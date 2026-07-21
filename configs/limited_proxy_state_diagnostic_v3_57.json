@@ -1,0 +1,48 @@
+{
+  "task_id": "20260529_v3_57_limited_proxy_state_diagnostic",
+  "source_path": "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_proxy_source.csv",
+  "signal_panel_path": "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_signal_panel.csv",
+  "label_path": "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_market_forward_labels.csv",
+  "v3_56_manifest_path": "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_57/limited_proxy_state_diagnostic",
+  "catalog_path": "data_catalog/a_share_limited_proxy_state_diagnostic_v3_57.md",
+  "horizons": [1, 5, 20, 60],
+  "state_windows": {
+    "trend": 20,
+    "volatility": 20,
+    "drawdown": 60
+  },
+  "thresholds": {
+    "trend_up": 0.03,
+    "trend_down": -0.03,
+    "low_volatility": 0.18,
+    "high_volatility": 0.30,
+    "moderate_drawdown": -0.05,
+    "deep_drawdown": -0.15,
+    "label_abs_outlier": 0.50
+  },
+  "minimums": {
+    "source_rows": 200,
+    "signal_rows": 1000,
+    "label_rows": 100,
+    "joined_rows": 7000,
+    "state_date_coverage_ratio": 0.95,
+    "history_available_signal_date_ratio": 0.75,
+    "state_bucket_signal_dates": 10
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_proxy_source.csv",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_signal_panel.csv",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_market_forward_labels.csv",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/agent_run_manifest.json"
+  ],
+  "forbidden_now": [
+    "run_ic_or_rank_ic",
+    "run_hit_rate",
+    "run_state_performance_validation",
+    "run_portfolio_backtest",
+    "write_official_market_total_return_source",
+    "model_promotion",
+    "claim_full_history_performance"
+  ]
+}

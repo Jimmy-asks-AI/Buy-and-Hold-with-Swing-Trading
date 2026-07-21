@@ -1,0 +1,33 @@
+{
+  "task_id": "20260529_v3_47_daily_only_feature_layer",
+  "data_root": "data_raw/tushare_daily_only/v3_38/daily",
+  "quarantine_path": "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/ohlc_quarantine_rows.csv",
+  "registry_path": "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_dataset_registry.csv",
+  "adapter_manifest_path": "outputs/agent_runs/v3_46/accepted_daily_only_adapter/agent_run_manifest.json",
+  "processed_scope_summary_path": "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/processed_scope_summary.csv",
+  "output_dir": "outputs/agent_runs/v3_47/daily_only_feature_layer",
+  "catalog_path": "data_catalog/a_share_daily_only_feature_layer_v3_47.md",
+  "low_amount_raw_threshold": 5000.0,
+  "low_volume_raw_threshold": 100.0,
+  "high_activity_amount_quantile": 0.8,
+  "top_amount_count": 10,
+  "sample_asset_dates": [
+    "20140618",
+    "20140728",
+    "20260528"
+  ],
+  "sample_asset_top_n_by_amount": 25,
+  "allowed_feature_families": [
+    "coverage",
+    "liquidity_activity",
+    "market_breadth",
+    "intraday_raw_diagnostics"
+  ],
+  "forbidden_feature_families": [
+    "adjusted_return",
+    "total_return",
+    "valuation",
+    "dividend",
+    "portfolio_performance"
+  ]
+}

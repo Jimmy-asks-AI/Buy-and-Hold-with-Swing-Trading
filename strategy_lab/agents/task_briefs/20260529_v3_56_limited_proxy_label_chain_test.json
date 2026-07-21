@@ -1,0 +1,36 @@
+{
+  "task_id": "20260529_v3_56_limited_proxy_label_chain_test",
+  "version": "V3.56",
+  "role": "limited_proxy_label_chain_tester",
+  "objective": "Use the V3.55 JoinQuant limited-window adjusted proxy to verify the V3.53 label-generation chain without creating performance evidence.",
+  "fixed_inputs": [
+    "configs/limited_proxy_label_chain_test_v3_56.json",
+    "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/normalized_proxy_series.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv"
+  ],
+  "outputs": [
+    "strategy_lab/limited_proxy_label_chain_test.py",
+    "strategy_lab/hirssm_v3_56_limited_proxy_label_chain_test.py",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_proxy_source.csv",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_signal_panel.csv",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_market_forward_labels.csv",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_label_coverage.csv",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/chain_readiness_checks.csv",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_56/limited_proxy_label_chain_test/limited_proxy_label_chain_report.md",
+    "data_catalog/a_share_limited_proxy_label_chain_test_v3_56.md"
+  ],
+  "forbidden": [
+    "Do not write data_raw/market_labels/market_total_return_index.csv.",
+    "Do not run IC, hit rate, state validation, portfolio backtest, NAV, Sharpe, drawdown, or model promotion.",
+    "Do not claim full-history performance from the limited JoinQuant trial window.",
+    "Do not treat adjusted proxy as official total-return index."
+  ],
+  "acceptance": [
+    "The proxy source must pass V3.53-style source validation under limited-window thresholds.",
+    "A limited signal panel must be constructed only from dates with sufficient future source observations.",
+    "Forward labels must be generated for 1/5/20/60 horizons.",
+    "Performance validation must remain blocked.",
+    "The report must clearly label results as short-window technical chain validation."
+  ]
+}

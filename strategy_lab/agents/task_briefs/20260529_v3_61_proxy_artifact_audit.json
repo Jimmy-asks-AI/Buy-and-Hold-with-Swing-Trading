@@ -1,0 +1,78 @@
+{
+  "task_id": "20260529_v3_61_proxy_artifact_audit",
+  "parent_id": "20260529_v3_60_state_stratified_proxy_validation",
+  "version": "V3.61",
+  "assigned_agent": "research_reporter",
+  "status": "ready",
+  "objective": "Audit V3.60 proxy-positive MARKET signal observations for artifact risk before any stricter validation queue is created.",
+  "baseline": {
+    "version": "V3.60",
+    "script": "strategy_lab/hirssm_v3_60_state_stratified_proxy_validation.py",
+    "output_dir": "outputs/agent_runs/v3_60/state_stratified_proxy_validation",
+    "metrics_to_compare": [
+      "proxy_positive_observation_rows",
+      "default_model_allowed_rows",
+      "official_total_return_evidence_rows"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/proxy_artifact_audit_v3_61.json",
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/joined_proxy_validation_panel.csv",
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/signal_proxy_validation_summary.csv",
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/state_stratified_proxy_validation.csv",
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/negative_control_summary.csv",
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/agent_run_manifest.json",
+    "data_raw/market_labels/market_price_index_proxy_000985.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/proxy_artifact_audit.py",
+    "strategy_lab/hirssm_v3_61_proxy_artifact_audit.py",
+    "configs/proxy_artifact_audit_v3_61.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_61_proxy_artifact_audit.json",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/",
+    "data_catalog/a_share_proxy_artifact_audit_v3_61.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_60_state_stratified_proxy_validation"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/proxy_positive_candidates.csv",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/temporal_artifact_audit.csv",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/negative_control_artifact_audit.csv",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/state_dependence_artifact_audit.csv",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/market_trend_regime_audit.csv",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/candidate_artifact_decision.csv",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/proxy_artifact_audit_report.md",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/agent_run_manifest.json",
+    "data_catalog/a_share_proxy_artifact_audit_v3_61.md"
+  ],
+  "forbidden": [
+    "Do not write data_raw/market_labels/market_total_return_index.csv.",
+    "Do not write NAV, portfolio returns, Sharpe, drawdown, or model-promotion outputs.",
+    "Do not mark any signal as default enabled.",
+    "Do not claim official total-return or dividend-inclusive performance.",
+    "Do not treat price-index proxy evidence as proof of tradable alpha."
+  ],
+  "acceptance_criteria": [
+    "V3.60 manifest must show self_check_pass true.",
+    "Proxy-positive V3.60 rows are all audited.",
+    "Temporal, negative-control, state-dependence, and trend-regime outputs exist.",
+    "Candidate decisions all block default model promotion.",
+    "Portfolio promotion remains blocked."
+  ],
+  "failure_conditions": [
+    "Any output marks official_total_return_evidence true.",
+    "Any candidate decision allows default model promotion.",
+    "Any portfolio backtest or NAV output is produced.",
+    "Any credential appears outside configs/data_credentials.json."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json records model_promotion_blocked.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "backtest_validation_auditor should run a narrow walk-forward proxy review only for rows that survive this artifact audit."
+}

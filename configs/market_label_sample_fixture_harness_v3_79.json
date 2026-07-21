@@ -1,0 +1,69 @@
+{
+  "task_id": "20260601_v3_79_market_label_sample_fixture_harness",
+  "v3_78_config_path": "configs/market_label_sample_intake_validator_v3_78.json",
+  "v3_78_manifest_path": "outputs/agent_runs/v3_78/market_label_sample_intake_validator/agent_run_manifest.json",
+  "fixture_sample_dir": "outputs/agent_runs/v3_79/market_label_sample_fixture_harness/fixtures/incoming_samples",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_79/market_label_sample_fixture_harness",
+  "catalog_path": "data_catalog/a_share_market_label_sample_fixture_harness_v3_79.md",
+  "expected_cases": [
+    {
+      "case_id": "valid_csindex_sample",
+      "expected_decision": "candidate_pass_to_v3_75_review",
+      "expected_check": "source_matches_v3_77_procurement_route",
+      "expected_check_status": "pass"
+    },
+    {
+      "case_id": "missing_available_date_sample",
+      "expected_decision": "rejected_or_needs_repair",
+      "expected_check": "required_columns_or_aliases",
+      "expected_check_status": "fail"
+    },
+    {
+      "case_id": "price_only_sample",
+      "expected_decision": "rejected_or_needs_repair",
+      "expected_check": "accepted_return_basis",
+      "expected_check_status": "fail"
+    },
+    {
+      "case_id": "available_date_violation_sample",
+      "expected_decision": "rejected_or_needs_repair",
+      "expected_check": "available_date_not_before_date",
+      "expected_check_status": "fail"
+    },
+    {
+      "case_id": "outlier_warning_sample",
+      "expected_decision": "candidate_pass_to_v3_75_review",
+      "expected_check": "daily_change_outlier_screen",
+      "expected_check_status": "warn"
+    },
+    {
+      "case_id": "unapproved_source_sample",
+      "expected_decision": "rejected_or_needs_repair",
+      "expected_check": "source_matches_v3_77_procurement_route",
+      "expected_check_status": "fail"
+    },
+    {
+      "case_id": "short_sample",
+      "expected_decision": "rejected_or_needs_repair",
+      "expected_check": "min_sample_rows",
+      "expected_check_status": "fail"
+    }
+  ],
+  "allowed_inputs": [
+    "configs/market_label_sample_intake_validator_v3_78.json",
+    "outputs/agent_runs/v3_78/market_label_sample_intake_validator/agent_run_manifest.json",
+    "strategy_lab/market_label_sample_intake_validator.py"
+  ],
+  "forbidden_now": [
+    "write_official_target_source",
+    "run_v3_53",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion"
+  ]
+}

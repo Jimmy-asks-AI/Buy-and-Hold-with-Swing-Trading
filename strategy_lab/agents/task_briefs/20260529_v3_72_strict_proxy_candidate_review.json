@@ -1,0 +1,92 @@
+{
+  "task_id": "20260529_v3_72_strict_proxy_candidate_review",
+  "parent_id": "20260529_v3_71_guarded_feature_label_validation",
+  "version": "V3.72",
+  "assigned_agent": "chief_quant_orchestrator",
+  "status": "ready",
+  "objective": "Strictly review the V3.71 proxy-positive feature-horizon rows with redundancy clustering, extended negative controls, alternate-index proxy validation, and market-trend proxy diagnostics; output a higher-quality label-review queue only.",
+  "baseline": {
+    "version": "V3.71",
+    "script": "strategy_lab/hirssm_v3_72_strict_proxy_candidate_review.py",
+    "output_dir": "outputs/agent_runs/v3_72/strict_proxy_candidate_review",
+    "metrics_to_compare": [
+      "v3_71_proxy_positive_rows",
+      "strict_survivor_rows",
+      "redundant_non_representative_rows",
+      "extended_negative_control_flag_rows",
+      "market_trend_proxy_flag_rows"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/strict_proxy_candidate_review_v3_72.json",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/agent_run_manifest.json",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/feature_horizon_summary.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/candidate_decision.csv",
+    "outputs/agent_runs/v3_71/guarded_feature_label_validation/walk_forward_feature_results.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/combined_feature_panel.csv",
+    "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000300.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000905.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/000985.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/strict_proxy_candidate_review.py",
+    "strategy_lab/hirssm_v3_72_strict_proxy_candidate_review.py",
+    "configs/strict_proxy_candidate_review_v3_72.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_72_strict_proxy_candidate_review.json",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/",
+    "data_catalog/a_share_strict_proxy_candidate_review_v3_72.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_71_guarded_feature_label_validation",
+    "20260529_v3_70_combined_feature_registry",
+    "20260529_v3_59_market_price_proxy_label_importer"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/input_checks.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/proxy_positive_candidates.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/alternate_index_label_coverage.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/feature_redundancy_clusters.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/extended_negative_controls.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/cross_index_validation.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/market_trend_proxy_report.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/strict_candidate_decision.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/source_family_strict_summary.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/acceptance_checks.csv",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/strict_proxy_candidate_review_report.md",
+    "outputs/agent_runs/v3_72/strict_proxy_candidate_review/agent_run_manifest.json",
+    "data_catalog/a_share_strict_proxy_candidate_review_v3_72.md"
+  ],
+  "forbidden": [
+    "Do not run a portfolio backtest.",
+    "Do not generate NAV, Sharpe, drawdown, annualized return, or portfolio-return outputs.",
+    "Do not use proxy labels as official total-return evidence.",
+    "Do not promote any feature into the default model.",
+    "Do not move V3.71 proxy-positive rows directly to a portfolio harness."
+  ],
+  "acceptance_criteria": [
+    "V3.71 manifest must pass its own self checks.",
+    "Only V3.71 proxy-positive feature-horizon rows are reviewed.",
+    "Redundancy clustering must be written for all reviewed rows.",
+    "Extended negative controls must include at least three shifts.",
+    "Cross-index validation must include at least two alternate broad-index price proxies.",
+    "Market-trend proxy diagnostics must be written.",
+    "No output permits portfolio backtest, official total-return validation, or model promotion."
+  ],
+  "failure_conditions": [
+    "Any output allows portfolio harness or model promotion.",
+    "Any official total-return evidence is claimed.",
+    "Any NAV, Sharpe, drawdown, annualized return, or portfolio-return output is produced.",
+    "Any credential appears outside configs/data_credentials.json."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Forbidden performance or promotion column scan returns zero hits.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "data_steward should acquire or validate a higher-quality official/total-return label source for strict survivors before any strategy harness is considered."
+}

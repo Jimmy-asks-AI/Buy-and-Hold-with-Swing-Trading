@@ -1,0 +1,16 @@
+factor_id,column,family,direction,horizon,data_type,availability_col,cost_tier,description
+ep_ttm,ep_ttm_raw,value,1,20,financial,financial_available_at,low,TTM earnings yield aligned by announcement or ingestion date
+bp_adj,bp_adj_raw,value,1,20,financial,financial_available_at,low,Book-to-price or intangible-adjusted book-to-price
+roe_stable,roe_stable_raw,quality,1,20,financial,financial_available_at,low,ROE level and stability score
+gross_profit_trend,gross_profit_trend_raw,profitability,1,20,financial,financial_available_at,low,Gross-profit trend or GP slope
+dividend_yield,dividend_yield_raw,dividend,1,20,corporate_action,dividend_available_at,low,Trailing or forecast dividend yield
+one_month_reversal,one_month_reversal_raw,reversal,1,20,market,,low,Past one-month reversal alpha score
+six_month_momentum,six_month_momentum_raw,momentum,1,20,market,,low,Risk-adjusted intermediate momentum
+turnover_volatility,turnover_volatility_raw,liquidity,-1,20,market,,low,Turnover instability penalty
+tail_risk,tail_risk_raw,volatility,-1,20,market,,medium,Downside or tail dependence risk
+analyst_revision,analyst_revision_raw,analyst,1,20,analyst,analyst_available_at,medium,Consensus forecast revision using point-in-time snapshots
+margin_growth,margin_growth_raw,behavior,1,20,margin,margin_available_at,medium,Financing growth relative to trading amount
+large_order_net_buy,large_order_net_buy_raw,level2,1,5,level2,level2_available_at,high,Large-order net buying pressure
+intraday_structure,intraday_structure_raw,intraday,1,5,intraday,intraday_available_at,high,Intraday microstructure score
+macro_rate_sensitive,macro_rate_sensitive_raw,macro,1,20,macro,macro_available_at,medium,Macro beta times live macro state
+text_sentiment,text_sentiment_raw,llm_text,1,20,text,text_available_at,high,Point-in-time text or LLM sentiment score

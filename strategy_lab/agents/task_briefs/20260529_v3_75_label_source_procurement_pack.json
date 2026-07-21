@@ -1,0 +1,85 @@
+{
+  "task_id": "20260529_v3_75_label_source_procurement_pack",
+  "parent_id": "20260529_v3_74_live_label_source_acquisition_attempt",
+  "version": "V3.75",
+  "assigned_agent": "data_steward",
+  "status": "ready",
+  "objective": "Convert the missing MARKET total-return/adjusted label source into a concrete procurement package, import validator, and short-window smoke-test report without writing official labels or performance evidence.",
+  "baseline": {
+    "version": "V3.74",
+    "script": "strategy_lab/hirssm_v3_75_label_source_procurement_pack.py",
+    "output_dir": "outputs/agent_runs/v3_75/label_source_procurement_pack",
+    "metrics_to_compare": [
+      "v3_74_candidate_rows",
+      "v3_74_candidate_min_coverage",
+      "target_source_exists",
+      "ready_for_v3_53",
+      "procurement_requirement_rows"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/label_source_procurement_pack_v3_75.json",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/agent_run_manifest.json",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/manual_required_data_interfaces.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/joinquant_adjusted_proxy_candidate.csv",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/market_total_return_source_contract.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/label_source_procurement_pack.py",
+    "strategy_lab/hirssm_v3_75_label_source_procurement_pack.py",
+    "configs/label_source_procurement_pack_v3_75.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_75_label_source_procurement_pack.json",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/",
+    "data_catalog/a_share_label_source_procurement_pack_v3_75.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_74_live_label_source_acquisition_attempt",
+    "20260529_v3_53_market_total_return_label_importer",
+    "20260529_v3_50_candidate_signal_registry"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/procurement_requirements.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/import_source_contract.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/market_total_return_index.vendor_template.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/provider_request_template.md",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/v3_74_candidate_import_validation.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/v3_74_candidate_signal_coverage.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/target_source_import_validation.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/target_source_signal_coverage.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/short_window_smoke_test.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/import_decision.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/label_source_procurement_pack_report.md",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/agent_run_manifest.json",
+    "data_catalog/a_share_label_source_procurement_pack_v3_75.md"
+  ],
+  "forbidden": [
+    "Do not write data_raw/market_labels/market_total_return_index.csv.",
+    "Do not generate labels, NAV, Sharpe, drawdown, annualized return, portfolio returns, or model-promotion outputs.",
+    "Do not treat the V3.74 short-window JoinQuant candidate as official or sufficient evidence.",
+    "Do not run V3.53 from this task."
+  ],
+  "acceptance_criteria": [
+    "A vendor/provider request template is written.",
+    "A source CSV template with the V3.53 contract columns is written.",
+    "The V3.74 candidate is validated and explicitly blocked for coverage/source-basis.",
+    "The official target source is checked if present and otherwise marked missing.",
+    "The import decision remains blocked unless the target source passes validation and coverage."
+  ],
+  "failure_conditions": [
+    "Any official target source is created by V3.75.",
+    "Any short-window smoke output is marked as official label evidence.",
+    "Any portfolio or performance artifact is generated.",
+    "Any credential appears in outputs."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Forbidden performance or promotion output scan returns zero hits.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "After a vendor/provider CSV is delivered at data_raw/market_labels/market_total_return_index.csv, rerun V3.75; only then rerun V3.53 if ready_for_v3_53=true."
+}

@@ -1,0 +1,76 @@
+{
+  "task_id": "20260527_v3_33_independent_signal_source_discovery",
+  "parent_id": "20260527_subagent_effectiveness_critique_v4",
+  "version": "V3.33",
+  "assigned_agent": "factor_researcher",
+  "status": "accepted",
+  "objective": "Run a broad independent signal and data-source discovery batch after the subagent effectiveness review, avoiding further macro gate parameter repair.",
+  "baseline": {
+    "version": "HIRSSM V3.10 Clean Rank-Vol Core",
+    "script": "strategy_lab/hirssm_v3_10_clean_baseline.py",
+    "output_dir": "outputs/hirssm_v3_10_clean_baseline",
+    "metrics_to_compare": [
+      "rank_ic_mean",
+      "icir",
+      "positive_ic_rate",
+      "top_bottom_spread",
+      "holdout_pass",
+      "orthogonality"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/hirssm_v2_default.json",
+    "data_raw/index",
+    "data_raw/macro",
+    "outputs/hirssm_v3_10_clean_baseline",
+    "outputs/agent_runs/v3_20/rescue_signal_research",
+    "outputs/agent_runs/v3_24/valuation_source_research",
+    "outputs/agent_runs/v3_25/industry_structure_source_research",
+    "strategy_lab/hirssm_v2_model.py",
+    "strategy_lab/hirssm_v2_walk_forward.py"
+  ],
+  "allowed_writes": [
+    "strategy_lab/hirssm_v3_33_independent_signal_source_discovery.py",
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery",
+    "reports/AGENT_TASK_BOARD.md",
+    "reports/MODEL_DECISION_LOG.md",
+    "reports/AGENT_REVIEW_SUMMARY.md"
+  ],
+  "dependencies": [
+    "20260527_subagent_effectiveness_critique_v4"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery/data_source_inventory.csv",
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery/signal_source_library.csv",
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery/signal_validation.csv",
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery/signal_gate_holdout_validation.csv",
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery/source_orthogonality_matrix.csv",
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery/next_research_queue.csv",
+    "outputs/agent_runs/v3_33/independent_signal_source_discovery/agent_run_manifest.json"
+  ],
+  "forbidden": [
+    "changing any existing HIRSSM default or candidate weights",
+    "running a portfolio implementation harness",
+    "tuning thresholds from full-sample performance",
+    "promoting any source directly to default",
+    "using current index components or latest weights as historical PIT inputs"
+  ],
+  "acceptance_criteria": [
+    "at least 10 independent source hypotheses are evaluated",
+    "holdout validation is reported separately from full-sample diagnostics",
+    "data-source PIT usability is explicitly classified",
+    "next implementation candidates are only allowed if holdout and orthogonality gates pass"
+  ],
+  "failure_conditions": [
+    "fewer than 10 source hypotheses evaluated",
+    "holdout split missing",
+    "current snapshot data is marked backtest-allowed",
+    "framework self-check fails"
+  ],
+  "quality_gates": [
+    "python -X utf8 -m py_compile strategy_lab/hirssm_v3_33_independent_signal_source_discovery.py",
+    "python -X utf8 strategy_lab/hirssm_v3_33_independent_signal_source_discovery.py",
+    "python -X utf8 strategy_lab/agent_framework_check.py"
+  ],
+  "next_handoff": "chief_quant_orchestrator"
+}

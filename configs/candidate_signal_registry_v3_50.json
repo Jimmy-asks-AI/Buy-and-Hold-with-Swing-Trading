@@ -1,0 +1,17 @@
+{
+  "task_id": "20260529_v3_50_candidate_signal_registry",
+  "state_panel_path": "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+  "state_monitor_manifest_path": "outputs/agent_runs/v3_48/daily_only_state_monitor/agent_run_manifest.json",
+  "signal_panel_contract_path": "outputs/agent_runs/v3_49/state_stratified_validation_framework/signal_panel_contract.csv",
+  "validation_framework_manifest_path": "outputs/agent_runs/v3_49/state_stratified_validation_framework/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_50/candidate_signal_registry",
+  "catalog_path": "data_catalog/a_share_candidate_signal_registry_v3_50.md",
+  "min_signal_rows": 60000,
+  "expected_candidate_count": 11,
+  "forbidden_now": [
+    "return_label",
+    "performance_validation",
+    "portfolio_backtest",
+    "model_promotion"
+  ]
+}

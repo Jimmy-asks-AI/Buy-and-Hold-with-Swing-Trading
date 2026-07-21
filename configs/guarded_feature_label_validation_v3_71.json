@@ -1,0 +1,60 @@
+{
+  "task_id": "20260529_v3_71_guarded_feature_label_validation",
+  "combined_manifest_path": "outputs/agent_runs/v3_70/combined_feature_registry/agent_run_manifest.json",
+  "combined_panel_path": "outputs/agent_runs/v3_70/combined_feature_registry/combined_feature_panel.csv",
+  "feature_registry_path": "outputs/agent_runs/v3_70/combined_feature_registry/feature_registry.csv",
+  "label_path": "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+  "v3_59_manifest_path": "outputs/agent_runs/v3_59/market_price_proxy_label_importer/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_71/guarded_feature_label_validation",
+  "catalog_path": "data_catalog/a_share_guarded_feature_label_validation_v3_71.md",
+  "horizons": [1, 5, 20, 60],
+  "walk_forward": {
+    "train_years": 5,
+    "test_years": 1
+  },
+  "gate_thresholds": {
+    "min_full_sample_observations": 4500,
+    "min_train_observations": 900,
+    "min_test_observations": 120,
+    "min_abs_train_spearman": 0.02,
+    "min_abs_train_qspread": 0.0,
+    "min_signed_oos_spearman": 0.0,
+    "min_signed_oos_qspread": 0.0,
+    "min_gated_windows": 4,
+    "min_oos_pass_rate": 0.55,
+    "min_oos_median_signed_spearman": 0.0,
+    "min_oos_positive_qspread_share": 0.55
+  },
+  "bucket_validation": {
+    "top_quantile": 0.8,
+    "bottom_quantile": 0.2
+  },
+  "negative_control": {
+    "shift_rows": 63
+  },
+  "multiple_testing": {
+    "fdr_alpha": 0.1
+  },
+  "stale_macro_policy": {
+    "exclude_stale_macro_rows": true
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_70/combined_feature_registry/agent_run_manifest.json",
+    "outputs/agent_runs/v3_70/combined_feature_registry/combined_feature_panel.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/feature_registry.csv",
+    "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+    "outputs/agent_runs/v3_59/market_price_proxy_label_importer/agent_run_manifest.json"
+  ],
+  "forbidden_now": [
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "write_annualized_return",
+    "write_portfolio_return",
+    "model_promotion",
+    "default_enablement",
+    "official_total_return_claim",
+    "treat_proxy_as_investable_performance"
+  ]
+}

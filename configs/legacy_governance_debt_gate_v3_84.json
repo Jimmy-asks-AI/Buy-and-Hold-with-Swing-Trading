@@ -1,0 +1,24 @@
+{
+  "task_id": "20260601_v3_84_legacy_governance_debt_gate",
+  "framework_check_script": "strategy_lab/agent_framework_check.py",
+  "legacy_allowlist_path": "strategy_lab/agents/_templates/legacy_governance_debt_allowlist.json",
+  "output_dir": "outputs/agent_runs/v3_84/legacy_governance_debt_gate",
+  "catalog_path": "data_catalog/a_share_legacy_governance_debt_gate_v3_84.md",
+  "allowed_inputs": [
+    "strategy_lab/agent_framework_check.py",
+    "strategy_lab/agents/_templates/legacy_governance_debt_allowlist.json",
+    "strategy_lab/agents/_templates/task_brief.schema.json",
+    "strategy_lab/agents/_templates/agent_run_manifest.schema.json",
+    "reports/AGENT_TASK_BOARD.md",
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/agent_run_manifest.json"
+  ],
+  "forbidden_now": [
+    "modify_model_logic",
+    "run_label_generation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion"
+  ]
+}

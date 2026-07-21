@@ -1,0 +1,86 @@
+{
+  "task_id": "20260527_v3_36_pit_data_pilot_readiness",
+  "parent_id": "20260527_v3_35_pit_data_acquisition_contract",
+  "version": "V3.36",
+  "assigned_agent": "data_steward",
+  "status": "accepted",
+  "objective": "Run the next PIT data acquisition step as a controlled readiness and pilot task: verify SDK/API credentials, attempt only a small predeclared pilot if execution is explicitly enabled and credentials are ready, and otherwise emit blocked evidence without pretending that data was acquired.",
+  "baseline": {
+    "version": "V3.35 PIT Data Acquisition Contract",
+    "script": "strategy_lab/hirssm_v3_35_pit_data_acquisition_contract.py",
+    "output_dir": "outputs/agent_runs/v3_35/pit_data_acquisition_contract",
+    "metrics_to_compare": [
+      "contract_dataset_count",
+      "harvest_plan_rows",
+      "tushare_execute_ready",
+      "joinquant_execute_ready"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/pit_data_acquisition_v3_35.json",
+    "configs/pit_data_pilot_v3_36.json",
+    "configs/data_credentials.example.json",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/acquisition_contract.csv",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/harvest_plan.csv",
+    "outputs/agent_runs/v3_35/pit_data_acquisition_contract/credential_readiness.csv",
+    "data_raw/akshare/stock_list/stock_info_a_code_name.csv",
+    "data_raw/akshare/calendar/trade_calendar.csv",
+    "data_catalog/"
+  ],
+  "allowed_writes": [
+    "configs/pit_data_pilot_v3_36.json",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/",
+    "data_raw/pit_pilot/v3_36/",
+    "data_catalog/a_share_pit_data_pilot_v3_36.md",
+    "reports/AGENT_TASK_BOARD.md",
+    "reports/MODEL_DECISION_LOG.md",
+    "reports/AGENT_REVIEW_SUMMARY.md"
+  ],
+  "dependencies": [
+    "20260527_v3_35_pit_data_acquisition_contract",
+    "strategy_lab/agents/data_steward/AGENT.md"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/agent_run_manifest.json",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/agent_report.md",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/credential_readiness.csv",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/pilot_execution_plan.csv",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/pilot_run_log.csv",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/acquired_dataset_registry.csv",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/data_quality_report.csv",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/data_dictionary.csv",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/point_in_time_check.csv",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/blocked_reason.csv",
+    "outputs/agent_runs/v3_36/pit_data_pilot_readiness/self_check.csv"
+  ],
+  "forbidden": [
+    "No portfolio harness or strategy backtest.",
+    "No factor validation or signal promotion.",
+    "Do not write or print real credentials, tokens, cookies, or browser session details.",
+    "Do not use Chrome login cookies as Python API credentials.",
+    "Do not run full-market acquisition before a pilot passes PIT validation.",
+    "Do not mark blocked or planned datasets as acquired."
+  ],
+  "acceptance_criteria": [
+    "Credential readiness is checked without exposing secrets.",
+    "Pilot scope is explicitly predeclared before execution.",
+    "If SDK/credentials are unavailable, the task is marked blocked at acquisition level but self-check still verifies governance artifacts.",
+    "If any pilot data is acquired, it receives source path, row count, coverage dates, duplicate check, availability fields, and downstream restriction.",
+    "No acquired pilot dataset is approved for full historical backtesting until broader validation passes."
+  ],
+  "failure_conditions": [
+    "Secrets appear in any output artifact.",
+    "The script downloads full-market data instead of pilot scope.",
+    "A blocked dataset is marked acquired.",
+    "Current snapshots are approved as historical data.",
+    "Required output artifacts are missing."
+  ],
+  "quality_gates": [
+    "execute flag must be false unless SDK and credentials are ready.",
+    "Pilot acquisition requires Tushare SDK plus token for Tushare endpoints.",
+    "Pilot acquisition requires jqdatasdk plus username/password for JoinQuant endpoints.",
+    "available_date must be present in acquired output files or the file remains research_only.",
+    "self_check_pass must be true."
+  ],
+  "next_handoff": "If blocked, the next task is SDK/API credential setup. If pilot data is acquired, rerun data_steward PIT validation before factor_researcher consumes any new table."
+}

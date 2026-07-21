@@ -1,0 +1,32 @@
+{
+  "task_id": "20260601_v3_82_market_label_registered_sample_intake_orchestrator",
+  "v3_80_manifest_path": "outputs/agent_runs/v3_80/market_label_raw_sample_registry/agent_run_manifest.json",
+  "v3_80_registry_path": "outputs/agent_runs/v3_80/market_label_raw_sample_registry/raw_sample_registry.csv",
+  "v3_81_manifest_path": "outputs/agent_runs/v3_81/market_label_raw_registry_fixture_harness/agent_run_manifest.json",
+  "v3_78_config_path": "configs/market_label_sample_intake_validator_v3_78.json",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator",
+  "catalog_path": "data_catalog/a_share_registered_sample_intake_orchestrator_v3_82.md",
+  "controlled_config_dir": "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/controlled_v3_78_configs",
+  "execute_v3_78": false,
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_80/market_label_raw_sample_registry/agent_run_manifest.json",
+    "outputs/agent_runs/v3_80/market_label_raw_sample_registry/raw_sample_registry.csv",
+    "outputs/agent_runs/v3_81/market_label_raw_registry_fixture_harness/agent_run_manifest.json",
+    "configs/market_label_sample_intake_validator_v3_78.json",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "forbidden_now": [
+    "copy_raw_sample",
+    "write_official_target_source",
+    "execute_v3_78_by_default",
+    "run_v3_53",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion"
+  ]
+}

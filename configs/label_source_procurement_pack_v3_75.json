@@ -1,0 +1,44 @@
+{
+  "task_id": "20260529_v3_75_label_source_procurement_pack",
+  "v3_74_manifest_path": "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/agent_run_manifest.json",
+  "v3_74_manual_interfaces_path": "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/manual_required_data_interfaces.csv",
+  "v3_74_candidate_path": "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/joinquant_adjusted_proxy_candidate.csv",
+  "source_contract_path": "outputs/agent_runs/v3_53/market_total_return_label_importer/market_total_return_source_contract.csv",
+  "signal_panel_path": "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_75/label_source_procurement_pack",
+  "catalog_path": "data_catalog/a_share_label_source_procurement_pack_v3_75.md",
+  "required_start_date": "2000-01-01",
+  "required_end_date": "2026-05-29",
+  "min_source_rows": 1000,
+  "min_signal_coverage_ratio": 0.8,
+  "horizons": [
+    1,
+    5,
+    20,
+    60
+  ],
+  "accepted_source_bases": [
+    "certified_total_return",
+    "explicit_adjusted_market_proxy"
+  ],
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/agent_run_manifest.json",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/manual_required_data_interfaces.csv",
+    "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt/joinquant_adjusted_proxy_candidate.csv",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/market_total_return_source_contract.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "forbidden_now": [
+    "write_official_target_source",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion",
+    "treat_short_window_smoke_as_evidence"
+  ]
+}

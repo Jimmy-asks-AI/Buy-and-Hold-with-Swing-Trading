@@ -1,0 +1,39 @@
+{
+  "task_id": "20260529_v3_44_raw_daily_adjustment_guard",
+  "data_root": "data_raw/tushare_daily_only/v3_38/daily",
+  "output_dir": "outputs/agent_runs/v3_44/raw_daily_adjustment_guard",
+  "catalog_path": "data_catalog/a_share_raw_daily_adjustment_guard_v3_44.md",
+  "start_date": "20000101",
+  "end_date": "20260528",
+  "scan_all_files": true,
+  "max_scan_files": 0,
+  "max_flag_records": 50000,
+  "raw_gap_abs_threshold": 0.08,
+  "reported_return_discrepancy_threshold": 0.05,
+  "manual_data_interfaces_still_needed": [
+    "adj_factor",
+    "stock_basic",
+    "daily_basic",
+    "index_weight",
+    "index_dailybasic"
+  ],
+  "hard_blocked_uses_without_adj_factor": [
+    "adjusted_return",
+    "total_return",
+    "long_horizon_momentum",
+    "portfolio_backtest_performance",
+    "high_dividend_return_analysis",
+    "low_pe_stock_selection",
+    "dividend_yield_total_return",
+    "qfq_close",
+    "hfq_close"
+  ],
+  "allowed_uses_with_raw_daily_only": [
+    "raw_ohlcv_storage",
+    "liquidity_screening",
+    "volume_activity_state",
+    "cross_sectional_coverage_checks",
+    "short_horizon_price_state_with_discontinuity_mask",
+    "market_breadth_using_sign_or_pct_chg_with_raw_boundary"
+  ]
+}

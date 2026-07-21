@@ -1,0 +1,84 @@
+{
+  "task_id": "20260529_v3_69_macro_growth_liquidity_features",
+  "parent_id": "20260529_v3_66_independent_pit_source_discovery",
+  "version": "V3.69",
+  "assigned_agent": "factor_researcher",
+  "status": "ready",
+  "objective": "Build a point-in-time macro growth-liquidity feature layer from macro_pit_panel, using only available_date as-of joins; no portfolio harness or model promotion.",
+  "baseline": {
+    "version": "V3.66",
+    "script": "strategy_lab/hirssm_v3_66_independent_pit_source_discovery.py",
+    "output_dir": "outputs/agent_runs/v3_66/independent_pit_source_discovery",
+    "metrics_to_compare": [
+      "feature_ready_source_rows",
+      "eligible_feature_layer_blueprint_rows",
+      "next_validation_queue_rows"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/macro_growth_liquidity_v3_69.json",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/agent_run_manifest.json",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/next_validation_queue.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/source_inventory.csv",
+    "data_raw/macro/macro_pit_panel.csv",
+    "data_raw/akshare/calendar/trade_calendar.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/macro_growth_liquidity_features.py",
+    "strategy_lab/hirssm_v3_69_macro_growth_liquidity_features.py",
+    "configs/macro_growth_liquidity_v3_69.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_69_macro_growth_liquidity_features.json",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/",
+    "data_catalog/a_share_macro_growth_liquidity_features_v3_69.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_66_independent_pit_source_discovery",
+    "20260527_v3_27_macro_data_ingestion"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/input_checks.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/series_coverage_report.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/asof_join_checks.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/macro_asof_feature_panel.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/feature_dictionary.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/signal_validation_plan.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/feature_contract.md",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/feature_quality_checks.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/macro_growth_liquidity_feature_report.md",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/agent_run_manifest.json",
+    "data_catalog/a_share_macro_growth_liquidity_features_v3_69.md"
+  ],
+  "forbidden": [
+    "Do not run a portfolio backtest.",
+    "Do not generate NAV, Sharpe, drawdown, annualized return, or portfolio-return outputs.",
+    "Do not use any macro value without available_date.",
+    "Do not use future macro releases where available_date is after trade_date.",
+    "Do not claim official total-return evidence.",
+    "Do not promote macro features into the default model.",
+    "Do not tune V3.64/V3.65 same-branch MARKET proxy thresholds."
+  ],
+  "acceptance_criteria": [
+    "V3.66 queue must contain the V3.69 macro_pit_panel feature-layer task.",
+    "V3.66 source inventory must mark macro_pit_panel ready for feature-layer use.",
+    "Macro panel must contain date, available_date, series_id, value, source, frequency, revision_policy, and pit_quality.",
+    "Every as-of join must satisfy available_date <= trade_date.",
+    "Feature panel must have at least 6000 dates and at least 3000 history-sufficient rows.",
+    "No output CSV column contains forbidden performance or promotion terms."
+  ],
+  "failure_conditions": [
+    "Any output uses macro data without available_date.",
+    "Any output allows portfolio harness or model promotion.",
+    "Any NAV, Sharpe, drawdown, annualized return, or portfolio-return output is produced.",
+    "Any credential appears outside configs/data_credentials.json."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Forbidden performance or promotion column scan returns zero hits.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "factor_researcher should start V3.70 combined feature registry joining V3.67, V3.68, and V3.69 by signal_use_date."
+}

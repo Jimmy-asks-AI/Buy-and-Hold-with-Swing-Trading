@@ -1,0 +1,69 @@
+factor_id,column,family,direction,horizon,data_type,availability_col,cost_tier,description
+value_ep_ttm,value_ep_ttm_raw,value,1,20,financial,financial_available_at,low,TTM earnings yield
+value_bp,value_bp_raw,value,1,20,financial,financial_available_at,low,Book-to-price
+value_sp_ttm,value_sp_ttm_raw,value,1,20,financial,financial_available_at,low,TTM sales-to-price
+value_ocfp_ttm,value_ocfp_ttm_raw,value,1,20,financial,financial_available_at,low,Operating cashflow-to-price
+value_fcfp_ttm,value_fcfp_ttm_raw,value,1,20,financial,financial_available_at,low,Free-cashflow-to-price
+value_ebitda_ev,value_ebitda_ev_raw,value,1,20,financial,financial_available_at,low,EBITDA-to-enterprise-value
+value_intangible_adjusted_bp,value_intangible_adjusted_bp_raw,value,1,20,financial,financial_available_at,medium,Intangible-adjusted book-to-price
+dividend_yield_ttm,dividend_yield_ttm_raw,dividend,1,20,corporate_action,dividend_available_at,low,Trailing dividend yield
+dividend_stability_3y,dividend_stability_3y_raw,dividend,1,20,corporate_action,dividend_available_at,low,Three-year dividend stability
+dividend_payout_quality,dividend_payout_quality_raw,dividend,1,20,financial,financial_available_at,low,Dividend payout supported by cashflow
+quality_roe_ttm,quality_roe_ttm_raw,quality,1,20,financial,financial_available_at,low,TTM return on equity
+quality_roa_ttm,quality_roa_ttm_raw,quality,1,20,financial,financial_available_at,low,TTM return on assets
+quality_gross_margin_ttm,quality_gross_margin_ttm_raw,quality,1,20,financial,financial_available_at,low,TTM gross margin
+quality_operating_margin_ttm,quality_operating_margin_ttm_raw,quality,1,20,financial,financial_available_at,low,TTM operating margin
+quality_cash_earnings,quality_cash_earnings_raw,quality,1,20,financial,financial_available_at,low,Operating cashflow divided by net profit
+quality_accruals,quality_accruals_raw,quality,-1,20,financial,financial_available_at,low,Accruals intensity
+quality_roe_stability,quality_roe_stability_raw,quality,1,20,financial,financial_available_at,low,ROE stability over trailing quarters
+quality_asset_growth_stability,quality_asset_growth_stability_raw,quality,1,20,financial,financial_available_at,low,Asset-growth stability
+profit_gross_profit_trend,profit_gross_profit_trend_raw,profitability,1,20,financial,financial_available_at,low,Gross-profit trend slope
+profit_roe_prediction,profit_roe_prediction_raw,profitability,1,20,financial,financial_available_at,medium,Predicted current ROE from disclosures and consensus
+profit_sue_weighted,profit_sue_weighted_raw,profitability,1,20,financial,financial_available_at,medium,Industry-weighted standardized unexpected earnings
+growth_revenue_yoy,growth_revenue_yoy_raw,growth,1,20,financial,financial_available_at,low,Revenue year-on-year growth
+growth_profit_yoy,growth_profit_yoy_raw,growth,1,20,financial,financial_available_at,low,Net-profit year-on-year growth
+growth_roe_yoy,growth_roe_yoy_raw,growth,1,20,financial,financial_available_at,low,ROE year-on-year change
+growth_sales_acceleration,growth_sales_acceleration_raw,growth,1,20,financial,financial_available_at,low,Sales growth acceleration
+investment_asset_growth,investment_asset_growth_raw,investment,-1,20,financial,financial_available_at,low,Asset growth anomaly score
+investment_capex_growth,investment_capex_growth_raw,investment,-1,20,financial,financial_available_at,low,Capital expenditure growth penalty
+investment_net_issuance,investment_net_issuance_raw,investment,-1,20,financial,financial_available_at,low,Net equity issuance penalty
+leverage_debt_to_assets,leverage_debt_to_assets_raw,leverage,-1,20,financial,financial_available_at,low,Debt-to-assets risk
+leverage_interest_coverage,leverage_interest_coverage_raw,leverage,1,20,financial,financial_available_at,low,Interest coverage
+leverage_current_ratio,leverage_current_ratio_raw,leverage,1,20,financial,financial_available_at,low,Current ratio
+momentum_6m_skip1m,momentum_6m_skip1m_raw,momentum,1,20,market,,low,Six-month momentum skipping one month
+momentum_12m_skip1m,momentum_12m_skip1m_raw,momentum,1,20,market,,low,Twelve-month momentum skipping one month
+momentum_idiosyncratic,momentum_idiosyncratic_raw,momentum,1,20,market,,medium,Common-factor residual momentum
+momentum_analyst_adjusted,momentum_analyst_adjusted_raw,momentum,1,20,market,,medium,Momentum adjusted by analyst coverage or attention
+reversal_1m,reversal_1m_raw,reversal,1,20,market,,low,One-month reversal alpha score
+reversal_5d,reversal_5d_raw,reversal,1,5,market,,low,Five-day reversal alpha score
+reversal_dynamic,reversal_dynamic_raw,reversal,1,20,market,,medium,Dynamic reversal with market-state adjustment
+liquidity_turnover,liquidity_turnover_raw,liquidity,-1,20,market,,low,Turnover level penalty
+liquidity_turnover_volatility,liquidity_turnover_volatility_raw,liquidity,-1,20,market,,low,Turnover volatility penalty
+liquidity_amount_size_residual,liquidity_amount_size_residual_raw,liquidity,1,20,market,,low,Trading amount residual after size control
+volatility_total,volatility_total_raw,volatility,-1,20,market,,low,Total volatility penalty
+volatility_downside,volatility_downside_raw,volatility,-1,20,market,,low,Downside volatility penalty
+volatility_tail_dependence,volatility_tail_dependence_raw,volatility,-1,20,market,,medium,Tail dependence or crash co-movement risk
+technical_efficiency_ratio,technical_efficiency_ratio_raw,technical,1,20,market,,low,Trend efficiency ratio
+technical_dpo,technical_dpo_raw,technical,1,20,market,,low,Detrended price oscillator signal
+technical_category_vote,technical_category_vote_raw,technical,1,5,market,,low,Technical category vote score
+intraday_tail_session_strength,intraday_tail_session_strength_raw,intraday,1,5,intraday,intraday_available_at,high,Intraday tail-session price-volume strength
+intraday_upside_downside_variance,intraday_upside_downside_variance_raw,intraday,1,5,intraday,intraday_available_at,high,Upside-minus-downside realized variance
+level2_large_order_net_buy,level2_large_order_net_buy_raw,level2,1,5,level2,level2_available_at,high,Large-order net buy ratio
+level2_net_turnover,level2_net_turnover_raw,level2,1,5,level2,level2_available_at,high,Directional net turnover
+level2_lob_relative_strength,level2_lob_relative_strength_raw,level2,1,5,level2,level2_available_at,high,Order-book relative depth strength
+analyst_eps_revision,analyst_eps_revision_raw,analyst,1,20,analyst,analyst_available_at,medium,Consensus EPS revision
+analyst_rating_revision,analyst_rating_revision_raw,analyst,1,20,analyst,analyst_available_at,medium,Analyst rating upgrade score
+analyst_coverage_residual,analyst_coverage_residual_raw,analyst,1,20,analyst,analyst_available_at,medium,Analyst coverage residual after size and liquidity
+behavior_margin_growth,behavior_margin_growth_raw,behavior,1,20,margin,margin_available_at,medium,Financing growth relative to trading amount
+behavior_compensation_growth,behavior_compensation_growth_raw,behavior,1,20,financial,financial_available_at,medium,Payable compensation growth
+behavior_attention_sentiment,behavior_attention_sentiment_raw,behavior,1,20,text,text_available_at,high,Attention-adjusted sentiment score
+fund_skill_holding,fund_skill_holding_raw,fund_flow,1,20,fund,fund_available_at,medium,Skilled fund holding implied alpha
+fund_flow_implied_trade,fund_flow_implied_trade_raw,fund_flow,1,20,fund,fund_available_at,medium,Fund flow implied trade signal
+macro_rate_duration_score,macro_rate_duration_score_raw,macro,1,20,macro,macro_available_at,medium,Equity duration times interest-rate regime
+macro_epu_beta_score,macro_epu_beta_score_raw,macro,1,20,macro,macro_available_at,medium,EPU sensitivity times live EPU state
+alternative_related_company_momentum,alternative_related_company_momentum_raw,alternative,1,20,relationship,relationship_available_at,medium,Related-company information spillover momentum
+alternative_supply_chain_signal,alternative_supply_chain_signal_raw,alternative,1,20,relationship,relationship_available_at,medium,Supply-chain relationship signal
+llm_news_sentiment,llm_news_sentiment_raw,llm_text,1,5,text,text_available_at,high,Point-in-time news sentiment from LLM or classifier
+llm_report_risk_score,llm_report_risk_score_raw,llm_text,-1,20,text,text_available_at,high,Report or announcement risk score
+ml_deep_highfreq_score,ml_deep_highfreq_score_raw,ml_deep,1,5,model,model_available_at,high,Orthogonalized deep high-frequency model output
+ml_factor_auto_mined_score,ml_factor_auto_mined_score_raw,ml_deep,1,20,model,model_available_at,high,Auto-mined factor score after governance checks

@@ -1,0 +1,52 @@
+{
+  "type": "object",
+  "schema_version": "model_run_manifest.v1",
+  "required_top_level_fields": [
+    "schema_version",
+    "task_id",
+    "run_id",
+    "model_version",
+    "baseline",
+    "status",
+    "started_at",
+    "finished_at",
+    "cwd",
+    "output_dir",
+    "command",
+    "argv",
+    "code_refs",
+    "config",
+    "data_refs",
+    "environment",
+    "selection",
+    "metrics",
+    "artifacts",
+    "checks",
+    "limitations",
+    "risk_flags",
+    "next_decision",
+    "handoff_summary"
+  ],
+  "required_ref_fields": [
+    "name",
+    "path",
+    "sha256",
+    "exists"
+  ],
+  "required_artifact_fields": [
+    "name",
+    "path",
+    "kind",
+    "required",
+    "exists",
+    "sha256",
+    "size_bytes"
+  ],
+  "promotion_blocking": [
+    "missing required top-level field",
+    "missing or unhashed code_refs/data_refs/config",
+    "missing or unhashed required artifact",
+    "self_check_pass is not true",
+    "fail_count is non-zero"
+  ]
+}

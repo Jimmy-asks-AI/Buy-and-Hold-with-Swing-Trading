@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "required": [
+    "task_id",
+    "parent_id",
+    "version",
+    "assigned_agent",
+    "status",
+    "objective",
+    "baseline",
+    "allowed_inputs",
+    "allowed_writes",
+    "dependencies",
+    "required_outputs",
+    "forbidden",
+    "acceptance_criteria",
+    "failure_conditions",
+    "quality_gates",
+    "next_handoff"
+  ],
+  "properties": {
+    "task_id": { "type": "string" },
+    "parent_id": { "type": "string" },
+    "version": { "type": "string" },
+    "assigned_agent": { "type": "string" },
+    "status": {
+      "enum": ["backlog", "ready", "in_progress", "blocked", "review", "accepted", "rejected", "archived"]
+    },
+    "objective": { "type": "string" },
+    "baseline": {
+      "type": "object",
+      "required": ["version", "script", "output_dir"],
+      "properties": {
+        "version": { "type": "string" },
+        "script": { "type": "string" },
+        "output_dir": { "type": "string" },
+        "metrics_to_compare": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "allowed_inputs": { "type": "array", "items": { "type": "string" } },
+    "allowed_writes": { "type": "array", "items": { "type": "string" } },
+    "dependencies": { "type": "array", "items": { "type": "string" } },
+    "required_outputs": { "type": "array", "items": { "type": "string" } },
+    "forbidden": { "type": "array", "items": { "type": "string" } },
+    "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+    "failure_conditions": { "type": "array", "items": { "type": "string" } },
+    "quality_gates": { "type": "array", "items": { "type": "string" } },
+    "next_handoff": { "type": "string" }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "task_id": "20260529_v3_66_independent_pit_source_discovery",
+  "parent_id": "20260529_v3_65_walk_forward_failure_attribution",
+  "version": "V3.66",
+  "assigned_agent": "chief_quant_orchestrator",
+  "status": "ready",
+  "objective": "Pivot away from same-branch MARKET proxy tuning and discover independent local point-in-time data sources and signal blueprints for the next feature-layer tasks.",
+  "baseline": {
+    "version": "V3.65",
+    "script": "strategy_lab/hirssm_v3_65_walk_forward_failure_attribution.py",
+    "output_dir": "outputs/agent_runs/v3_65/walk_forward_failure_attribution",
+    "metrics_to_compare": [
+      "retire_signal_horizon_rows",
+      "state_condition_retest_rows",
+      "model_promotion_status"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/independent_pit_source_discovery_v3_66.json",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/agent_run_manifest.json",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/retire_repair_decisions.csv",
+    "data_raw/index/akshare_sw_industry/daily_sw/",
+    "data_raw/index/akshare_csindex/daily_csindex/",
+    "data_raw/index/akshare_csindex/valuation_pe_lg/",
+    "data_raw/index/akshare_csindex/valuation_pb_lg/",
+    "data_raw/macro/macro_pit_panel.csv",
+    "data_raw/tushare_daily_only/v3_38/daily/",
+    "data_raw/akshare/daily_qfq/",
+    "data_raw/akshare/financial_indicator/"
+  ],
+  "allowed_writes": [
+    "strategy_lab/independent_pit_source_discovery.py",
+    "strategy_lab/hirssm_v3_66_independent_pit_source_discovery.py",
+    "configs/independent_pit_source_discovery_v3_66.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_66_independent_pit_source_discovery.json",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/",
+    "data_catalog/a_share_independent_pit_source_discovery_v3_66.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_65_walk_forward_failure_attribution"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/input_checks.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/source_inventory.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/signal_blueprints.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/v3_65_branch_policy.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/next_validation_queue.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/blocked_data_requests.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/independent_pit_source_discovery_report.md",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/agent_run_manifest.json",
+    "data_catalog/a_share_independent_pit_source_discovery_v3_66.md"
+  ],
+  "forbidden": [
+    "Do not run a portfolio backtest.",
+    "Do not generate NAV, Sharpe, drawdown, annualized return, or portfolio-return outputs.",
+    "Do not promote any signal to a default model.",
+    "Do not use current constituents or latest weights as historical point-in-time data.",
+    "Do not create stock-return labels from unadjusted raw Tushare daily prices.",
+    "Do not tune V3.64/V3.65 same-branch thresholds."
+  ],
+  "acceptance_criteria": [
+    "V3.65 manifest must show self_check_pass true and model_promotion_status blocked.",
+    "At least eight local source groups are inventoried.",
+    "At least three feature-layer candidate blueprints are discovered.",
+    "Current snapshot sources are explicitly blocked for historical validation.",
+    "A next validation queue is produced without portfolio or model-promotion outputs."
+  ],
+  "failure_conditions": [
+    "Any output allows default-model promotion.",
+    "Any portfolio harness or performance series is produced.",
+    "Any current snapshot source is marked historical validation ready.",
+    "Any credential appears outside configs/data_credentials.json."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Forbidden performance or promotion column scan returns zero hits.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "data_steward should start V3.67 by building a market participation breadth feature layer from Tushare daily-only partitions with an explicit raw-adjustment guard."
+}

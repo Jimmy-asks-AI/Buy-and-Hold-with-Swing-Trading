@@ -1,0 +1,31 @@
+{
+  "task_id": "20260529_v3_45_1_daily_only_data_acceptance_quarantine",
+  "version": "V3.45.1",
+  "role": "data_quality_auditor",
+  "objective": "Resolve V3.45 data acceptance failure without mutating raw Tushare daily files by quarantining source-side OHLC anomalies and proving the processed scope is clean.",
+  "fixed_inputs": [
+    "configs/daily_only_data_acceptance_v3_45_1.json",
+    "data_raw/tushare_daily_only/v3_38/daily",
+    "outputs/agent_runs/v3_45/daily_only_data_acceptance/acceptance_checks.csv",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/agent_run_manifest.json"
+  ],
+  "outputs": [
+    "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/ohlc_quarantine_rows.csv",
+    "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/processed_scope_summary.csv",
+    "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/acceptance_checks.csv",
+    "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/acceptance_report.md",
+    "data_catalog/a_share_daily_only_data_acceptance_v3_45_1.md"
+  ],
+  "forbidden": [
+    "Do not edit raw CSV data files.",
+    "Do not call Tushare or any other network API.",
+    "Do not promote this data to adjusted-return, valuation, or portfolio-backtest use."
+  ],
+  "acceptance": [
+    "Every source OHLC anomaly must be row-level identified.",
+    "Every source OHLC anomaly must be quarantined from the processed scope.",
+    "All non-OHLC V3.45 checks must pass.",
+    "V3.44 raw adjustment guard must still pass.",
+    "The final manifest must keep model_decision as no_model_promotion."
+  ]
+}

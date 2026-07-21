@@ -1,0 +1,23 @@
+{
+  "task_id": "20260602_v3_92_sample_research_run",
+  "parent_id": "20260602_v3_91_research_report_builder",
+  "version": "V3.92",
+  "assigned_agent": "backtest_validation_auditor",
+  "status": "accepted",
+  "objective": "Run an end-to-end sample research workflow and record self-check evidence.",
+  "baseline": {
+    "version": "V3.91",
+    "script": "strategy_lab/hirssm_v3_86_to_v3_92_quant_research_assistant.py",
+    "output_dir": "outputs/agent_runs/v3_91/research_report_builder/",
+    "metrics_to_compare": ["object_count", "html_size_bytes"]
+  },
+  "allowed_inputs": ["outputs/agent_runs/v3_87/research_object_schema/", "outputs/agent_runs/v3_88/technical_signal_engine/", "outputs/agent_runs/v3_89/fundamental_factor_engine/", "outputs/agent_runs/v3_90/research_view_synthesizer/"],
+  "allowed_writes": ["outputs/agent_runs/v3_92/sample_research_run/", "data_catalog/a_share_quant_research_assistant_v3_86_to_v3_92.md", "reports/HIRSSM_V3_86_TO_V3_92_QUALITY_REVIEW.md"],
+  "dependencies": ["20260602_v3_91_research_report_builder"],
+  "required_outputs": ["sample_research_run.csv", "sample_research_report.md", "sample_pipeline_checks.csv", "cross_version_gate_audit.csv", "sample_boundary_audit.csv", "sample_research_decision.md", "quality_rework_findings.csv", "reports/HIRSSM_V3_86_TO_V3_92_QUALITY_REVIEW.md", "agent_run_manifest.json"],
+  "forbidden": ["Do not treat sample views as validated alpha.", "Do not claim tradable strategy performance.", "Do not pass V3.92 when any required upstream gate fails.", "Do not omit research-only/no-order/no-backtest boundary checks."],
+  "acceptance_criteria": ["End-to-end views exist.", "Pipeline checks have no fail status.", "Cross-version gate audit has zero fails.", "Sample boundary audit has zero fails.", "All sample rows are research-only.", "Hard conflicts remain neutral.", "Quality findings are fixed or explicitly blocked.", "Catalog note exists."],
+  "failure_conditions": ["Any sample pipeline check fails.", "Missing sample report.", "Any upstream gate audit fails.", "Any sample row is allowed as order, portfolio weight, alpha promotion, or historical backtest feature."],
+  "quality_gates": ["CSV and markdown outputs exist.", "Cross-version gate audit exists.", "Boundary audit exists.", "Research decision note exists.", "Manifest paths exist.", "Global framework self-check passes."],
+  "next_handoff": "chief_quant_orchestrator"
+}

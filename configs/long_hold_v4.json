@@ -1,0 +1,151 @@
+{
+  "model": {
+    "name": "Long Hold Dividend V4",
+    "version": "4.0.0",
+    "purpose": "durable dividend core holdings with deep-value staged entry and low-frequency T sleeve",
+    "max_snapshot_age_days": 7,
+    "max_price_age_days": 5
+  },
+  "account": {
+    "initial_cash_cny": 500000.0,
+    "base_currency": "CNY",
+    "allow_margin": false,
+    "allow_short": false
+  },
+  "costs": {
+    "stock_commission_rate": 0.00008,
+    "etf_commission_rate": 0.00005,
+    "minimum_commission_cny": 0.0,
+    "stock_sell_stamp_duty_rate": 0.0005,
+    "stock_transfer_fee_rate": 0.00001,
+    "etf_stamp_duty_rate": 0.0,
+    "slippage_bps_each_side": 2.0
+  },
+  "universe": {
+    "allowed_asset_types": ["stock", "etf"],
+    "allowed_sectors": ["bank", "insurance", "utility", "transport", "telecom", "consumer_staples", "dividend_index"],
+    "minimum_history_years": 5,
+    "maximum_assets": 10
+  },
+  "quality_gates": {
+    "common_stock": {
+      "positive_profit_years_5y_min": 5,
+      "dividend_years_5y_min": 5,
+      "roe_mean_5y_min": 0.08,
+      "revenue_cagr_5y_min": 0.0,
+      "profit_cagr_5y_min": 0.0,
+      "profit_cv_5y_max": 0.60,
+      "payout_ratio_min": 0.20,
+      "payout_ratio_max": 0.80,
+      "dividend_cut_count_5y_max": 1
+    },
+    "bank": {
+      "npl_ratio_max": 0.02,
+      "provision_coverage_min": 1.50,
+      "core_tier1_ratio_min": 0.085
+    },
+    "insurance": {
+      "solvency_ratio_min": 1.50,
+      "new_business_value_cagr_3y_min": 0.0
+    },
+    "utility": {
+      "debt_to_assets_max": 0.72,
+      "interest_coverage_min": 2.0,
+      "fcf_dividend_coverage_min": 1.0
+    },
+    "general_stock": {
+      "debt_to_assets_max": 0.65,
+      "interest_coverage_min": 3.0,
+      "fcf_dividend_coverage_min": 1.0
+    },
+    "etf": {
+      "aum_cny_min": 1000000000.0,
+      "avg_daily_amount_cny_min": 50000000.0,
+      "expense_ratio_max": 0.008,
+      "tracking_error_1y_max": 0.02,
+      "index_history_years_min": 5,
+      "distribution_years_5y_min": 4,
+      "total_return_history_required": true,
+      "nav_max_age_days": 7,
+      "valuation_max_age_days": 31,
+      "aum_max_age_days": 7,
+      "distribution_max_age_days": 7,
+      "expense_max_age_days": 7,
+      "index_max_age_days": 5
+    }
+  },
+  "score_weights": {
+    "quality": 0.25,
+    "dividend": 0.25,
+    "growth": 0.15,
+    "stability": 0.15,
+    "valuation": 0.20
+  },
+  "entry": {
+    "minimum_final_score": 65.0,
+    "pe_percentile_5y_max": 0.20,
+    "pb_percentile_5y_max": 0.20,
+    "sector_valuation_percentile_max": 0.35,
+    "yield_spread_cn10y_min": 0.015,
+    "stock_drawdown_3y_max": -0.20,
+    "etf_drawdown_3y_max": -0.15,
+    "stabilization_distance_from_60d_low_min": 0.03,
+    "stabilization_ma20_slope_10d_min": -0.01,
+    "stabilization_vol20_to_vol60_max": 1.10,
+    "range_efficiency_ratio_20d_max": 0.45,
+    "tranche_fractions": [0.30, 0.60, 1.00]
+  },
+  "t_strategy": {
+    "enabled": true,
+    "core_fraction_required": 0.80,
+    "t_sleeve_fraction_of_full_position": 0.20,
+    "portfolio_t_weight_cap": 0.10,
+    "entry_zscore_20d_max": -1.20,
+    "exit_zscore_20d_min": 0.0,
+    "minimum_holding_days": 2,
+    "maximum_holding_days": 20,
+    "minimum_edge_after_cost": 0.004,
+    "same_day_t_allowed": false,
+    "stock_settlement": "T+1",
+    "etf_settlement": "T+1"
+  },
+  "execution": {
+    "order_valid_calendar_days": 14
+  },
+  "portfolio": {
+    "target_core_exposure": 0.80,
+    "minimum_cash_weight": 0.10,
+    "max_single_stock_weight": 0.12,
+    "max_single_etf_weight": 0.25,
+    "max_sector_weight": 0.30,
+    "stock_lot_size": 100,
+    "etf_lot_size": 100,
+    "drawdown_review_trigger": -0.12,
+    "drawdown_risk_reduction_trigger": -0.20
+  },
+  "validation": {
+    "require_available_date": true,
+    "require_historical_universe": true,
+    "require_total_return_or_adjusted_prices": true,
+    "signal_at_close_execute_next_open": true,
+    "cost_scenarios_bps": [5, 10, 20],
+    "price_index_proxy_promotion_allowed": false
+  },
+  "data": {
+    "snapshot_path": "data_raw/long_hold_v4/research_snapshot.csv",
+    "price_directory": "data_raw/long_hold_v4/prices",
+    "account_path": "portfolio_lab/long_hold_v4/account.json",
+    "agent_contracts_path": "configs/long_hold_v4_agent_contracts.json",
+    "output_directory": "outputs/long_hold_v4/current",
+    "source_manifest_paths": [
+      "data_raw/long_hold_v4/manifests/stock_source_manifest_latest.json",
+      "data_raw/long_hold_v4/manifests/etf_source_manifest_latest.json"
+    ],
+    "timing_proxy_paths": {
+      "000922": "data_raw/index/akshare_csindex/daily_csindex/000922.csv",
+      "801780": "data_raw/index/akshare_sw_industry/daily_sw/801780.csv",
+      "801160": "data_raw/index/akshare_sw_industry/daily_sw/801160.csv",
+      "801790": "data_raw/index/akshare_sw_industry/daily_sw/801790.csv"
+    }
+  }
+}

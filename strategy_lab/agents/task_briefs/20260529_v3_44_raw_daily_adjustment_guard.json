@@ -1,0 +1,33 @@
+{
+  "task_id": "20260529_v3_44_raw_daily_adjustment_guard",
+  "version": "V3.44",
+  "agent": "data_steward",
+  "objective": "Prevent downstream research from treating Tushare daily-only raw close as adjusted return data, and produce evidence of raw price discontinuities.",
+  "fixed_inputs": [
+    "configs/raw_daily_adjustment_guard_v3_44.json",
+    "data_raw/tushare_daily_only/v3_38/daily/",
+    "outputs/agent_runs/v3_43/daily_only_complete/completion_summary.md"
+  ],
+  "outputs": [
+    "strategy_lab/raw_daily_guard.py",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/research_capability_matrix.csv",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/raw_discontinuity_flags_top.csv",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/raw_discontinuity_asset_summary.csv",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/adapter_contract.json",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/guard_report.md",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/self_check.csv",
+    "data_catalog/a_share_raw_daily_adjustment_guard_v3_44.md"
+  ],
+  "forbidden_actions": [
+    "Do not create adjusted prices from raw close without adj_factor.",
+    "Do not allow portfolio backtest performance to use raw close returns.",
+    "Do not infer high-dividend or low-PE signals from daily-only data.",
+    "Do not call blocked Tushare endpoints in this task."
+  ],
+  "acceptance": [
+    "Adapter raises explicit errors for adjusted return, total return, qfq/hfq close, valuation, and PIT membership capabilities.",
+    "Capability matrix marks raw daily allowed and adjusted/valuation/dividend research blocked.",
+    "Discontinuity scan creates evidence that raw close continuity can diverge from reported daily pct_chg.",
+    "Report states the exact downstream uses that remain blocked until adj_factor/stock_basic/daily_basic are available."
+  ]
+}

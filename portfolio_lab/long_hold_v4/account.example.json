@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "account_id": "paper_account_example",
+  "base_currency": "CNY",
+  "as_of_date": "2026-01-01",
+  "cash_cny": 100000.0,
+  "holdings": [],
+  "realized_pnl_cny": 0.0,
+  "gross_dividend_cny": 0.0,
+  "dividend_tax_cny": 0.0,
+  "processed_fills": [],
+  "fill_history": [],
+  "processed_events": [],
+  "event_history": [],
+  "nav_history": [
+    {
+      "date": "2026-01-01",
+      "nav_cny": 100000.0,
+      "cash_cny": 100000.0,
+      "market_value_cny": 0.0,
+      "peak_nav_cny": 100000.0,
+      "drawdown": 0.0,
+      "risk_state": "NORMAL"
+    }
+  ],
+  "net_dividend_cny": 0.0
+}

@@ -1,0 +1,28 @@
+name: long-hold-v4
+
+on:
+  push:
+    paths:
+      - "strategy_lab/long_hold_v4/**"
+      - "tests/test_long_hold_v4*.py"
+      - "configs/long_hold_v4*.json"
+      - "requirements-long-hold-v4.txt"
+  pull_request:
+    paths:
+      - "strategy_lab/long_hold_v4/**"
+      - "tests/test_long_hold_v4*.py"
+      - "configs/long_hold_v4*.json"
+      - "requirements-long-hold-v4.txt"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements-long-hold-v4.txt
+      - run: python -m unittest discover -s tests -p "test_long_hold_v4*.py" -v
+      - run: python -m compileall strategy_lab/long_hold_v4 tests

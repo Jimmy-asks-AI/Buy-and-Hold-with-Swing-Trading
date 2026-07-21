@@ -1,0 +1,65 @@
+{
+  "task_id": "20260601_v3_81_market_label_raw_registry_fixture_harness",
+  "v3_80_config_path": "configs/market_label_raw_sample_registry_v3_80.json",
+  "v3_80_manifest_path": "outputs/agent_runs/v3_80/market_label_raw_sample_registry/agent_run_manifest.json",
+  "fixture_sample_dir": "outputs/agent_runs/v3_81/market_label_raw_registry_fixture_harness/fixtures/incoming_samples",
+  "license_status_path": "outputs/agent_runs/v3_81/market_label_raw_registry_fixture_harness/fixtures/license_review_status.csv",
+  "license_evidence_dir": "outputs/agent_runs/v3_81/market_label_raw_registry_fixture_harness/fixtures/license_evidence",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_81/market_label_raw_registry_fixture_harness",
+  "catalog_path": "data_catalog/a_share_market_label_raw_registry_fixture_harness_v3_81.md",
+  "expected_cases": [
+    {
+      "case_id": "duplicate_same_hash",
+      "expected_pass": true,
+      "detail": "identical files should share the same SHA256 identity"
+    },
+    {
+      "case_id": "tamper_hash_differs",
+      "expected_pass": true,
+      "detail": "modified file should have a different SHA256"
+    },
+    {
+      "case_id": "first_seen_stable",
+      "expected_pass": true,
+      "detail": "rerun with previous registry should preserve first_seen_utc by hash"
+    },
+    {
+      "case_id": "source_token_allows_valid",
+      "expected_pass": true,
+      "detail": "approved source token should be recognized"
+    },
+    {
+      "case_id": "source_token_blocks_unapproved",
+      "expected_pass": true,
+      "detail": "unapproved source token should block review"
+    },
+    {
+      "case_id": "license_allows_approved_hash",
+      "expected_pass": true,
+      "detail": "approved license evidence should allow V3.78 review for approved hash"
+    },
+    {
+      "case_id": "license_blocks_unknown_tamper",
+      "expected_pass": true,
+      "detail": "unknown license should block V3.78 review even for approved source token"
+    }
+  ],
+  "allowed_inputs": [
+    "configs/market_label_raw_sample_registry_v3_80.json",
+    "outputs/agent_runs/v3_80/market_label_raw_sample_registry/agent_run_manifest.json",
+    "strategy_lab/market_label_raw_sample_registry.py"
+  ],
+  "forbidden_now": [
+    "write_official_target_source",
+    "run_v3_78",
+    "run_v3_53",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion"
+  ]
+}

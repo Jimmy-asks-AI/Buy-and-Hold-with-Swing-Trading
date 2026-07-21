@@ -1,0 +1,77 @@
+{
+  "task_id": "20260529_v3_65_walk_forward_failure_attribution",
+  "parent_id": "20260529_v3_64_narrow_walk_forward_proxy_review",
+  "version": "V3.65",
+  "assigned_agent": "chief_quant_orchestrator",
+  "status": "ready",
+  "objective": "Decompose why V3.64 survivor signal-horizon rows failed narrow rolling OOS proxy review, and decide which rows should be retired, repaired with predeclared state filters, or kept observation-only.",
+  "baseline": {
+    "version": "V3.64",
+    "script": "strategy_lab/hirssm_v3_64_narrow_walk_forward_proxy_review.py",
+    "output_dir": "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review",
+    "metrics_to_compare": [
+      "train_gate_and_oos_pass_rows",
+      "signal_horizon_passes_narrow_proxy_walk_forward_rows",
+      "signal_horizon_watchlist_or_repair_rows"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/walk_forward_failure_attribution_v3_65.json",
+    "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/walk_forward_window_results.csv",
+    "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/survivor_joined_proxy_panel.csv",
+    "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/walk_forward_oos_summary.csv",
+    "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/agent_run_manifest.json"
+  ],
+  "allowed_writes": [
+    "strategy_lab/walk_forward_failure_attribution.py",
+    "strategy_lab/hirssm_v3_65_walk_forward_failure_attribution.py",
+    "configs/walk_forward_failure_attribution_v3_65.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_65_walk_forward_failure_attribution.json",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/",
+    "data_catalog/a_share_walk_forward_failure_attribution_v3_65.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_64_narrow_walk_forward_proxy_review"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/input_checks.csv",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/yearly_failure_attribution.csv",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/signal_horizon_failure_attribution.csv",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/train_oos_drift.csv",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/year_regime_attribution.csv",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/state_failure_attribution.csv",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/retire_repair_decisions.csv",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/walk_forward_failure_attribution_report.md",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/agent_run_manifest.json",
+    "data_catalog/a_share_walk_forward_failure_attribution_v3_65.md"
+  ],
+  "forbidden": [
+    "Do not write official total-return labels.",
+    "Do not write NAV, portfolio returns, Sharpe, annualized return, drawdown, or model-promotion outputs.",
+    "Do not mark any signal as default enabled.",
+    "Do not tune thresholds to maximize historical performance.",
+    "Do not convert state attribution into a tradable model without a new walk-forward task brief."
+  ],
+  "acceptance_criteria": [
+    "V3.64 manifest must show self_check_pass true.",
+    "Yearly, signal-horizon, state, and train-to-OOS drift attribution files are produced.",
+    "Retire/repair decisions distinguish long-horizon weak proxy rows from short-horizon state-condition repair candidates.",
+    "Promotion guard explicitly blocks investable model changes and portfolio backtests.",
+    "No output CSV column contains forbidden performance or promotion terms."
+  ],
+  "failure_conditions": [
+    "Any output allows a default-model promotion.",
+    "Any portfolio backtest or performance series is produced.",
+    "Any official total-return label is generated.",
+    "Any credential appears outside configs/data_credentials.json."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "chief_quant_orchestrator should either start V3.66 as a predeclared state-filter repair test or pivot to independent PIT source discovery."
+}

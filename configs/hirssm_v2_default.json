@@ -1,0 +1,841 @@
+{
+  "model_name": "HIRSSM_V2",
+  "description": "Hierarchical Industry Rotation and Size-Style Switching Model V2",
+  "rebalance": {
+    "main_frequency": "monthly",
+    "risk_check_frequency": "weekly",
+    "signal_timing": "close_after_signal_date",
+    "execution_timing": "next_trading_day_close",
+    "min_weight_change_to_trade": 0.02
+  },
+  "data_contract": {
+    "style_daily_path": "data_raw/index/akshare_csindex/daily_csindex",
+    "style_pe_path": "data_raw/index/akshare_csindex/valuation_pe_lg",
+    "style_pb_path": "data_raw/index/akshare_csindex/valuation_pb_lg",
+    "industry_daily_path": "data_raw/index/akshare_sw_industry/daily_sw",
+    "industry_classification_path": "data_raw/index/akshare_sw_industry/classification",
+    "industry_snapshot_path": "data_raw/index/akshare_sw_industry/analysis_latest_sw",
+    "industry_snapshot_backtest_allowed": false,
+    "current_components_backtest_allowed": false,
+    "macro_point_in_time_required": true,
+    "macro_available_date_required": true,
+    "macro_data_paths": {
+      "china_10y_yield": "data_raw/macro/china_10y_yield.csv",
+      "us_10y_yield": "data_raw/macro/us_10y_yield.csv",
+      "cny_fx": "data_raw/macro/cny_fx.csv",
+      "pmi": "data_raw/macro/pmi.csv",
+      "m2_social_financing": "data_raw/macro/m2_social_financing.csv",
+      "cpi_ppi": "data_raw/macro/cpi_ppi.csv",
+      "commodity_index": "data_raw/macro/commodity_index.csv"
+    },
+    "macro_backtest_allowed_without_available_date": false,
+    "historical_index_components_required_for_backtest": true
+  },
+  "asset_universe": {
+    "style": {
+      "large_cap": "000300",
+      "mid_cap": "000905",
+      "small_cap": "000852",
+      "broad_market": "000985",
+      "defensive_large": "000016",
+      "dividend": "000922"
+    },
+    "industry": {
+      "primary": "sw_level1",
+      "enhanced_level2": [
+        "801083",
+        "801081",
+        "801085",
+        "801102",
+        "801223",
+        "801055",
+        "801193",
+        "801194",
+        "801191"
+      ],
+      "avoid_parent_child_double_count": true
+    }
+  },
+  "feature_pipeline": {
+    "winsorize_quantile": 0.025,
+    "standardization": "robust_zscore",
+    "time_series_zscore_window": 756,
+    "cross_sectional_zscore": true,
+    "family_cluster_correlation_threshold": 0.75,
+    "min_history_days": 504,
+    "ohlc_features_require_full_bar": true
+  },
+  "factor_families": {
+    "trend_momentum": {
+      "features": ["ret_20", "ret_60", "ret_120", "ret_250", "ma_gap_60", "ma_gap_120", "ma_slope_60", "breakout_120"],
+      "cluster_before_scoring": true
+    },
+    "relative_strength": {
+      "features": ["excess_ret_20", "excess_ret_60", "excess_ret_120", "residual_momentum_60", "residual_momentum_120"],
+      "require_absolute_trend_confirmation": true
+    },
+    "valuation": {
+      "features": ["pe_percentile", "pb_percentile", "pe_spread", "pb_spread", "valuation_momentum"],
+      "style_backtest_enabled": true,
+      "industry_backtest_enabled": false,
+      "require_trend_or_risk_compression": true
+    },
+    "risk_compression": {
+      "features": ["vol_20", "vol_60", "downside_vol_60", "max_drawdown_120", "drawdown_recovery", "corr_to_market_120"],
+      "high_risk_direction": -1
+    },
+    "reversal_overheat": {
+      "features": ["ret_5", "ret_10", "ret_20", "rsi_14", "distance_to_ma20", "distance_to_ma60", "drawup_from_60d_low"],
+      "state_dependent_direction": true
+    },
+    "liquidity_crowding": {
+      "features": ["amount_zscore_60", "volume_zscore_60", "price_volume_confirmation", "crowding_score"],
+      "extreme_crowding_discount": 0.7
+    },
+    "breadth_dispersion": {
+      "features": ["industry_above_ma60_ratio", "industry_positive_ret20_ratio", "industry_return_dispersion", "industry_average_correlation"],
+      "used_for_budget_not_ranking": true
+    }
+  },
+  "regime_model": {
+    "initial_method": "rule_based",
+    "hmm_enabled": false,
+    "hmm_trade_directly_allowed": false,
+    "state_smoothing_days": 5,
+    "states": ["risk_on_trend", "risk_on_overheat", "range_bound", "risk_off_decline", "crash_rebound"]
+  },
+  "experts": {
+    "trend_continuation": {
+      "enabled": true,
+      "max_weight": 0.5
+    },
+    "style_trend_continuation": {
+      "enabled": false,
+      "scope": "style",
+      "status": "observation",
+      "parent_expert": "trend_continuation",
+      "requires_walk_forward": true
+    },
+    "industry_trend_continuation": {
+      "enabled": true,
+      "scope": "industry",
+      "status": "gated",
+      "parent_expert": "trend_continuation",
+      "requires_walk_forward": true
+    },
+    "valuation_repair": {
+      "enabled": true,
+      "max_weight": 0.25
+    },
+    "risk_compression": {
+      "enabled": true,
+      "max_weight": 0.35
+    },
+    "range_reversal": {
+      "enabled": true,
+      "max_weight": 0.3
+    },
+    "defensive": {
+      "enabled": true,
+      "max_weight": 0.7
+    },
+    "style_liquidity_overlay": {
+      "enabled": false,
+      "scope": "style",
+      "status": "observation",
+      "parent_expert": "liquidity_overlay",
+      "requires_walk_forward": true
+    },
+    "industry_liquidity_overlay": {
+      "enabled": true,
+      "scope": "industry",
+      "status": "gated",
+      "parent_expert": "liquidity_overlay",
+      "requires_walk_forward": true
+    },
+    "macro_liquidity_regime": {
+      "enabled": false,
+      "status": "observation",
+      "requires_point_in_time_macro": true
+    },
+    "rate_sensitivity": {
+      "enabled": false,
+      "status": "observation",
+      "requires_point_in_time_macro": true
+    },
+    "valuation_spread_repair": {
+      "enabled": false,
+      "status": "observation",
+      "requires_historical_valuation": true
+    },
+    "industry_valuation_repair": {
+      "enabled": false,
+      "status": "observation",
+      "requires_historical_industry_valuation": true
+    },
+    "defensive_cash_substitution": {
+      "enabled": true,
+      "status": "risk_control"
+    },
+    "ml_ranker": {
+      "enabled": false,
+      "max_weight": 0.15,
+      "requires_walk_forward": true,
+      "requires_pbo_check": true
+    }
+  },
+  "disabled_experts_by_default": ["range_reversal", "style_trend_continuation"],
+  "disabled_experts_reason": {
+    "range_reversal": "Fails current full-sample RankIC and ablation gates; keep as observation expert until walk-forward IC gating is implemented.",
+    "style_trend_continuation": "Style-level trend and relative-strength signals have negative 21-day RankIC and improve return/Sharpe/drawdown when disabled in pruning diagnostics."
+  },
+  "expert_gates": {
+    "enabled": true,
+    "train_years": 5,
+    "test_years": 1,
+    "horizon_days": 21,
+    "min_observations": 24,
+    "rank_ic_mean_min": 0.0,
+    "positive_ic_rate_min": 0.52,
+    "icir_min": 0.05,
+    "baseline_10bps_sharpe": 0.455,
+    "baseline_10bps_annual_return": 0.0867,
+    "baseline_10bps_max_drawdown": -0.5455,
+    "max_drawdown_allowed_slippage": 0.03,
+    "candidate_experts": [
+      "trend_continuation",
+      "style_trend_continuation",
+      "industry_trend_continuation",
+      "valuation_repair",
+      "risk_compression",
+      "range_reversal",
+      "defensive",
+      "liquidity_overlay",
+      "style_liquidity_overlay",
+      "industry_liquidity_overlay"
+    ],
+    "observation_experts": ["range_reversal", "style_trend_continuation", "style_liquidity_overlay"],
+    "gated_experts": ["industry_liquidity_overlay", "industry_trend_continuation"],
+    "always_observe_new_macro_experts": [
+      "macro_liquidity_regime",
+      "rate_sensitivity",
+      "valuation_spread_repair",
+      "industry_valuation_repair"
+    ]
+  },
+  "expert_state_gates": {
+    "enabled": true,
+    "version": "HIRSSM_V2_1",
+    "train_years": 5,
+    "test_years": 1,
+    "horizon_days": 21,
+    "gate_mode": "hybrid_bad_filter",
+    "min_observations": 8,
+    "rank_ic_mean_min": 0.0,
+    "positive_ic_rate_min": 0.52,
+    "icir_min": 0.0,
+    "negative_rank_ic_mean_max": -0.02,
+    "negative_positive_ic_rate_max": 0.48,
+    "negative_icir_max": -0.05,
+    "observation_consecutive_pass_windows": 2,
+    "consecutive_pass_windows_by_expert": {
+      "range_reversal": 1
+    },
+    "state_whitelist_by_expert": {
+      "industry_trend_continuation": ["crash_rebound", "range_bound"],
+      "range_reversal": ["risk_off_decline", "crash_rebound"]
+    },
+    "candidate_experts": [
+      "trend_continuation",
+      "style_trend_continuation",
+      "industry_trend_continuation",
+      "valuation_repair",
+      "risk_compression",
+      "range_reversal",
+      "defensive",
+      "liquidity_overlay",
+      "style_liquidity_overlay",
+      "industry_liquidity_overlay"
+    ],
+    "cscv_pbo_grid": [
+      {"variant": "hybrid_m8_bad2_pos52", "gate_mode": "hybrid_bad_filter", "min_observations": 8, "rank_ic_mean_min": 0.0, "positive_ic_rate_min": 0.52, "icir_min": 0.0, "negative_rank_ic_mean_max": -0.02, "negative_positive_ic_rate_max": 0.48, "negative_icir_max": -0.05},
+      {"variant": "hybrid_m10_bad2_pos52", "gate_mode": "hybrid_bad_filter", "min_observations": 10, "rank_ic_mean_min": 0.0, "positive_ic_rate_min": 0.52, "icir_min": 0.0, "negative_rank_ic_mean_max": -0.02, "negative_positive_ic_rate_max": 0.48, "negative_icir_max": -0.05},
+      {"variant": "hybrid_m8_bad1_pos52", "gate_mode": "hybrid_bad_filter", "min_observations": 8, "rank_ic_mean_min": 0.0, "positive_ic_rate_min": 0.52, "icir_min": 0.0, "negative_rank_ic_mean_max": -0.01, "negative_positive_ic_rate_max": 0.48, "negative_icir_max": -0.05},
+      {"variant": "hybrid_m8_bad2_pos55", "gate_mode": "hybrid_bad_filter", "min_observations": 8, "rank_ic_mean_min": 0.0, "positive_ic_rate_min": 0.55, "icir_min": 0.0, "negative_rank_ic_mean_max": -0.02, "negative_positive_ic_rate_max": 0.48, "negative_icir_max": -0.05},
+      {"variant": "positive_m6_ic0_pos52_icir0", "gate_mode": "positive_only", "min_observations": 6, "rank_ic_mean_min": 0.0, "positive_ic_rate_min": 0.52, "icir_min": 0.0},
+      {"variant": "positive_m8_ic0_pos52_icir0", "gate_mode": "positive_only", "min_observations": 8, "rank_ic_mean_min": 0.0, "positive_ic_rate_min": 0.52, "icir_min": 0.0},
+      {"variant": "positive_m8_ic2_pos52_icir0", "gate_mode": "positive_only", "min_observations": 8, "rank_ic_mean_min": 0.02, "positive_ic_rate_min": 0.52, "icir_min": 0.0},
+      {"variant": "positive_m8_ic0_pos55_icir0", "gate_mode": "positive_only", "min_observations": 8, "rank_ic_mean_min": 0.0, "positive_ic_rate_min": 0.55, "icir_min": 0.0}
+    ]
+  },
+  "expert_state_shrinkage": {
+    "enabled": true,
+    "version": "HIRSSM_V2_2",
+    "train_years": 5,
+    "test_years": 1,
+    "horizon_days": 21,
+    "min_observations": 8,
+    "base_multiplier": 1.0,
+    "min_multiplier": 0.55,
+    "max_multiplier": 1.15,
+    "shrink_strength": 0.22,
+    "rank_ic_scale": 0.08,
+    "icir_scale": 0.35,
+    "positive_rate_scale": 0.15,
+    "bad_evidence_multiplier": 0.45,
+    "negative_rank_ic_mean_max": -0.02,
+    "negative_positive_ic_rate_max": 0.48,
+    "negative_icir_max": -0.05,
+    "observation_entry_multiplier": 0.35,
+    "observation_max_multiplier": 0.75,
+    "observation_positive_ic_rate_min": 0.52,
+    "observation_rank_ic_mean_min": 0.0,
+    "observation_icir_min": 0.0,
+    "observation_consecutive_pass_windows": 2,
+    "consecutive_pass_windows_by_expert": {
+      "range_reversal": 1
+    },
+    "state_whitelist_by_expert": {
+      "industry_trend_continuation": ["crash_rebound", "range_bound"],
+      "range_reversal": ["risk_off_decline", "crash_rebound"]
+    },
+    "candidate_experts": [
+      "trend_continuation",
+      "style_trend_continuation",
+      "industry_trend_continuation",
+      "valuation_repair",
+      "risk_compression",
+      "range_reversal",
+      "defensive",
+      "liquidity_overlay",
+      "style_liquidity_overlay",
+      "industry_liquidity_overlay"
+    ],
+    "cscv_pbo_grid": [
+      {"variant": "shrink_s22_min55_max115", "shrink_strength": 0.22, "min_multiplier": 0.55, "max_multiplier": 1.15, "bad_evidence_multiplier": 0.45},
+      {"variant": "shrink_s15_min70_max110", "shrink_strength": 0.15, "min_multiplier": 0.70, "max_multiplier": 1.10, "bad_evidence_multiplier": 0.60},
+      {"variant": "shrink_s30_min50_max120", "shrink_strength": 0.30, "min_multiplier": 0.50, "max_multiplier": 1.20, "bad_evidence_multiplier": 0.40},
+      {"variant": "shrink_s22_min65_max115", "shrink_strength": 0.22, "min_multiplier": 0.65, "max_multiplier": 1.15, "bad_evidence_multiplier": 0.50},
+      {"variant": "shrink_s22_min55_max105", "shrink_strength": 0.22, "min_multiplier": 0.55, "max_multiplier": 1.05, "bad_evidence_multiplier": 0.45},
+      {"variant": "shrink_s15_min80_max105", "shrink_strength": 0.15, "min_multiplier": 0.80, "max_multiplier": 1.05, "bad_evidence_multiplier": 0.70},
+      {"variant": "shrink_s30_min60_max115", "shrink_strength": 0.30, "min_multiplier": 0.60, "max_multiplier": 1.15, "bad_evidence_multiplier": 0.45},
+      {"variant": "shrink_s10_min85_max105", "shrink_strength": 0.10, "min_multiplier": 0.85, "max_multiplier": 1.05, "bad_evidence_multiplier": 0.80}
+    ]
+  },
+  "expert_state_nested_selection": {
+    "enabled": true,
+    "version": "HIRSSM_V2_3",
+    "selection_lookback_years": 5,
+    "min_selection_years": 3,
+    "selection_cost_bps": 10,
+    "cost_bps_scenarios": [5, 10, 20, 30],
+    "fallback_variant": "shrink_s22_min55_max115",
+    "variant_source": "expert_state_shrinkage.cscv_pbo_grid",
+    "objective": {
+      "return_weight": 1.0,
+      "excess_return_weight": 0.5,
+      "volatility_penalty": 0.25,
+      "drawdown_penalty": 0.10,
+      "turnover_penalty": 0.02,
+      "underperformance_penalty": 0.02
+    }
+  },
+  "expert_state_stable_selection": {
+    "enabled": true,
+    "version": "HIRSSM_V2_4",
+    "selection_lookback_years": 5,
+    "min_selection_years": 3,
+    "selection_cost_bps_scenarios": [10, 20, 30],
+    "objective_cost_weights": {
+      "10": 0.25,
+      "20": 0.45,
+      "30": 0.30
+    },
+    "cost_bps_scenarios": [5, 10, 20, 30],
+    "fallback_variant": "stable_anchor",
+    "switch_penalty": 0.015,
+    "objective": {
+      "return_weight": 1.0,
+      "excess_return_weight": 0.6,
+      "volatility_penalty": 0.25,
+      "drawdown_penalty": 0.12,
+      "turnover_penalty": 0.03,
+      "underperformance_penalty": 0.03
+    },
+    "stable_variant_grid": [
+      {
+        "variant": "stable_anchor",
+        "shrink_strength": 0.22,
+        "min_multiplier": 0.55,
+        "max_multiplier": 1.15,
+        "bad_evidence_multiplier": 0.45
+      },
+      {
+        "variant": "stable_balanced",
+        "shrink_strength": 0.15,
+        "min_multiplier": 0.80,
+        "max_multiplier": 1.05,
+        "bad_evidence_multiplier": 0.70
+      },
+      {
+        "variant": "stable_conservative",
+        "shrink_strength": 0.10,
+        "min_multiplier": 0.85,
+        "max_multiplier": 1.05,
+        "bad_evidence_multiplier": 0.80
+      }
+    ]
+  },
+  "portfolio_risk_overlay_v2_5": {
+    "enabled": true,
+    "version": "HIRSSM_V2_5",
+    "description": "Fixed portfolio risk overlay on top of V2.4 stable nested selection; no new alpha expert and no expanded parameter grid.",
+    "cost_bps_scenarios": [5, 10, 20, 30],
+    "reference_cost_bps": 10,
+    "state_controls": {
+      "risk_on_trend": {
+        "target_volatility": 0.18,
+        "gross_exposure_cap": 1.0,
+        "min_cash": 0.0
+      },
+      "risk_on_overheat": {
+        "target_volatility": 0.14,
+        "gross_exposure_cap": 0.94,
+        "min_cash": 0.08
+      },
+      "range_bound": {
+        "target_volatility": 0.14,
+        "gross_exposure_cap": 0.94,
+        "min_cash": 0.08
+      },
+      "risk_off_decline": {
+        "target_volatility": 0.1,
+        "gross_exposure_cap": 0.72,
+        "min_cash": 0.25
+      },
+      "crash_rebound": {
+        "target_volatility": 0.12,
+        "gross_exposure_cap": 0.86,
+        "min_cash": 0.15
+      }
+    },
+    "volatility_scaling": {
+      "enabled": true,
+      "lookback_days": 60,
+      "buffer": 1.05,
+      "min_multiplier": 0.65,
+      "max_multiplier": 1.0
+    },
+    "market_drawdown_brake": {
+      "enabled": true,
+      "soft_trigger": -0.16,
+      "hard_trigger": -0.26,
+      "soft_multiplier": 0.9,
+      "hard_multiplier": 0.8,
+      "crash_rebound_min_multiplier": 0.88
+    },
+    "portfolio_drawdown_brake": {
+      "enabled": true,
+      "lookback_days": 252,
+      "soft_trigger": -0.16,
+      "hard_trigger": -0.26,
+      "soft_multiplier": 0.9,
+      "hard_multiplier": 0.8,
+      "crash_rebound_min_multiplier": 0.88
+    },
+    "quality_cash_substitution": {
+      "enabled": true,
+      "min_weighted_score_by_state": {
+        "risk_on_trend": -0.2,
+        "risk_on_overheat": 0.0,
+        "range_bound": 0.05,
+        "risk_off_decline": 0.1,
+        "crash_rebound": 0.0
+      },
+      "low_quality_multiplier": 0.85
+    },
+    "crowding_discount": {
+      "enabled": true,
+      "crowding_score_min": 0.9,
+      "amount_zscore_min": 1.5,
+      "ret60_min": 0.1,
+      "weight_multiplier": 0.85
+    },
+    "self_check_thresholds": {
+      "max_annual_return_slippage_vs_v2_4_10bps": 0.02,
+      "max_cash_weight": 0.4,
+      "min_20bps_annual_return": 0.0
+    }
+  },
+  "portfolio_risk_overlay_v2_6": {
+    "enabled": true,
+    "version": "HIRSSM_V2_6",
+    "description": "Attribution-first local sleeve risk overlay on top of V2.4 stable nested selection; reduce global cash drag from V2.5.",
+    "cost_bps_scenarios": [5, 10, 20, 30],
+    "reference_cost_bps": 10,
+    "state_gross_cap": {
+      "risk_on_trend": 1.0,
+      "risk_on_overheat": 0.96,
+      "range_bound": 0.96,
+      "risk_off_decline": 0.8,
+      "crash_rebound": 0.9
+    },
+    "min_cash_by_state": {
+      "risk_on_trend": 0.0,
+      "risk_on_overheat": 0.06,
+      "range_bound": 0.06,
+      "risk_off_decline": 0.2,
+      "crash_rebound": 0.1
+    },
+    "sleeve_volatility_scaling": {
+      "enabled": true,
+      "lookback_days": 60,
+      "buffer": 1.08,
+      "style": {
+        "min_multiplier": 0.82,
+        "target_volatility_by_state": {
+          "risk_on_trend": 0.2,
+          "risk_on_overheat": 0.16,
+          "range_bound": 0.16,
+          "risk_off_decline": 0.12,
+          "crash_rebound": 0.14
+        }
+      },
+      "industry": {
+        "min_multiplier": 0.7,
+        "target_volatility_by_state": {
+          "risk_on_trend": 0.22,
+          "risk_on_overheat": 0.17,
+          "range_bound": 0.17,
+          "risk_off_decline": 0.1,
+          "crash_rebound": 0.14
+        }
+      }
+    },
+    "asset_local_risk_discount": {
+      "enabled": true,
+      "high_vol_multiplier": 0.92,
+      "deep_drawdown_multiplier": 0.9,
+      "crowding_multiplier": 0.9,
+      "vol_60_high": 0.35,
+      "max_drawdown_120_hard": -0.22,
+      "crowding_score_min": 0.9,
+      "amount_zscore_min": 1.5,
+      "ret60_min": 0.1
+    },
+    "market_drawdown_brake": {
+      "enabled": true,
+      "soft_trigger": -0.18,
+      "hard_trigger": -0.28,
+      "soft_multiplier": 0.94,
+      "hard_multiplier": 0.88,
+      "crash_rebound_min_multiplier": 0.92
+    },
+    "portfolio_drawdown_brake": {
+      "enabled": true,
+      "lookback_days": 252,
+      "soft_trigger": -0.18,
+      "hard_trigger": -0.28,
+      "soft_multiplier": 0.94,
+      "hard_multiplier": 0.88,
+      "crash_rebound_min_multiplier": 0.92
+    },
+    "self_check_thresholds": {
+      "max_annual_return_slippage_vs_v2_4_10bps": 0.015,
+      "min_drawdown_improvement_vs_v2_4_10bps": 0.1,
+      "min_delta_sharpe_vs_v2_4_10bps": -0.01,
+      "max_cash_weight": 0.34,
+      "min_20bps_annual_return": 0.05
+    }
+  },
+  "portfolio_risk_overlay_v2_7": {
+    "enabled": true,
+    "version": "HIRSSM_V2_7",
+    "description": "V2.6 local sleeve overlay plus rule-based re-entry after recovery signals.",
+    "inherits": "portfolio_risk_overlay_v2_6",
+    "cost_bps_scenarios": [5, 10, 20, 30],
+    "reference_cost_bps": 10,
+    "state_gross_cap": {
+      "risk_on_trend": 1.0,
+      "risk_on_overheat": 0.98,
+      "range_bound": 0.97,
+      "risk_off_decline": 0.82,
+      "crash_rebound": 0.95
+    },
+    "min_cash_by_state": {
+      "risk_on_trend": 0.0,
+      "risk_on_overheat": 0.04,
+      "range_bound": 0.05,
+      "risk_off_decline": 0.18,
+      "crash_rebound": 0.05
+    },
+    "reentry_rules": {
+      "enabled": true,
+      "states": ["crash_rebound", "risk_on_trend"],
+      "market_ret20_min": 0.02,
+      "market_ma60_gap_min": -0.03,
+      "market_drawdown_floor": -0.25,
+      "market_brake_min_multiplier": 0.96,
+      "portfolio_brake_min_multiplier": 0.96,
+      "gross_cap_add": 0.05
+    },
+    "sleeve_volatility_scaling": {
+      "enabled": true,
+      "lookback_days": 60,
+      "buffer": 1.1,
+      "style": {
+        "min_multiplier": 0.86,
+        "target_volatility_by_state": {
+          "risk_on_trend": 0.21,
+          "risk_on_overheat": 0.17,
+          "range_bound": 0.17,
+          "risk_off_decline": 0.13,
+          "crash_rebound": 0.16
+        }
+      },
+      "industry": {
+        "min_multiplier": 0.72,
+        "target_volatility_by_state": {
+          "risk_on_trend": 0.23,
+          "risk_on_overheat": 0.18,
+          "range_bound": 0.18,
+          "risk_off_decline": 0.11,
+          "crash_rebound": 0.16
+        }
+      }
+    },
+    "asset_local_risk_discount": {
+      "enabled": true,
+      "high_vol_multiplier": 0.94,
+      "deep_drawdown_multiplier": 0.92,
+      "crowding_multiplier": 0.92,
+      "vol_60_high": 0.36,
+      "max_drawdown_120_hard": -0.24,
+      "crowding_score_min": 0.92,
+      "amount_zscore_min": 1.7,
+      "ret60_min": 0.12
+    },
+    "market_drawdown_brake": {
+      "enabled": true,
+      "soft_trigger": -0.2,
+      "hard_trigger": -0.3,
+      "soft_multiplier": 0.95,
+      "hard_multiplier": 0.9,
+      "crash_rebound_min_multiplier": 0.94
+    },
+    "portfolio_drawdown_brake": {
+      "enabled": true,
+      "lookback_days": 252,
+      "soft_trigger": -0.2,
+      "hard_trigger": -0.3,
+      "soft_multiplier": 0.95,
+      "hard_multiplier": 0.9,
+      "crash_rebound_min_multiplier": 0.94
+    },
+    "self_check_thresholds": {
+      "max_annual_return_slippage_vs_v2_4_10bps": 0.014,
+      "min_drawdown_improvement_vs_v2_4_10bps": 0.08,
+      "min_delta_sharpe_vs_v2_4_10bps": -0.01,
+      "max_cash_weight": 0.32,
+      "min_20bps_annual_return": 0.05
+    }
+  },
+  "portfolio_risk_overlay_v2_8": {
+    "enabled": true,
+    "version": "HIRSSM_V2_8",
+    "description": "Sleeve-specific repair: preserve style core exposure and make industry risk cuts more local.",
+    "inherits": "portfolio_risk_overlay_v2_7",
+    "cost_bps_scenarios": [5, 10, 20, 30],
+    "reference_cost_bps": 10,
+    "sleeve_preservation": {
+      "enabled": true,
+      "style_core_assets": ["000016", "000300", "000922"],
+      "style_core_min_multiplier": 0.94,
+      "industry_risk_budget_multiplier": 0.92,
+      "risk_off_industry_multiplier": 0.75
+    },
+    "state_gross_cap": {
+      "risk_on_trend": 1.0,
+      "risk_on_overheat": 0.98,
+      "range_bound": 0.98,
+      "risk_off_decline": 0.8,
+      "crash_rebound": 0.96
+    },
+    "min_cash_by_state": {
+      "risk_on_trend": 0.0,
+      "risk_on_overheat": 0.04,
+      "range_bound": 0.04,
+      "risk_off_decline": 0.2,
+      "crash_rebound": 0.04
+    },
+    "sleeve_volatility_scaling": {
+      "enabled": true,
+      "lookback_days": 60,
+      "buffer": 1.12,
+      "style": {
+        "min_multiplier": 0.9,
+        "target_volatility_by_state": {
+          "risk_on_trend": 0.22,
+          "risk_on_overheat": 0.18,
+          "range_bound": 0.18,
+          "risk_off_decline": 0.14,
+          "crash_rebound": 0.17
+        }
+      },
+      "industry": {
+        "min_multiplier": 0.68,
+        "target_volatility_by_state": {
+          "risk_on_trend": 0.22,
+          "risk_on_overheat": 0.17,
+          "range_bound": 0.17,
+          "risk_off_decline": 0.1,
+          "crash_rebound": 0.15
+        }
+      }
+    },
+    "asset_local_risk_discount": {
+      "enabled": true,
+      "high_vol_multiplier": 0.95,
+      "deep_drawdown_multiplier": 0.93,
+      "crowding_multiplier": 0.9,
+      "vol_60_high": 0.36,
+      "max_drawdown_120_hard": -0.25,
+      "crowding_score_min": 0.9,
+      "amount_zscore_min": 1.6,
+      "ret60_min": 0.12
+    },
+    "self_check_thresholds": {
+      "max_annual_return_slippage_vs_v2_4_10bps": 0.012,
+      "min_drawdown_improvement_vs_v2_4_10bps": 0.07,
+      "min_delta_sharpe_vs_v2_4_10bps": -0.005,
+      "max_cash_weight": 0.3,
+      "min_20bps_annual_return": 0.052
+    }
+  },
+  "portfolio_risk_overlay_v2_9": {
+    "enabled": true,
+    "version": "HIRSSM_V2_9",
+    "description": "Fixed blend of V2.4 return baseline and V2.8 local risk overlay to reduce cash drag while preserving drawdown improvement.",
+    "inherits": "portfolio_risk_overlay_v2_8",
+    "cost_bps_scenarios": [5, 10, 20, 30],
+    "reference_cost_bps": 10,
+    "blend": {
+      "enabled": true,
+      "risk_overlay_weight": 0.65,
+      "base_v2_4_weight": 0.35
+    },
+    "self_check_thresholds": {
+      "max_annual_return_slippage_vs_v2_4_10bps": 0.01,
+      "min_drawdown_improvement_vs_v2_4_10bps": 0.05,
+      "min_delta_sharpe_vs_v2_4_10bps": -0.005,
+      "max_cash_weight": 0.28,
+      "min_20bps_annual_return": 0.055
+    }
+  },
+  "expert_state_priors": {
+    "risk_on_trend": {
+      "trend_continuation": 0.45,
+      "valuation_repair": 0.1,
+      "risk_compression": 0.1,
+      "range_reversal": 0.05,
+      "defensive": 0.1,
+      "ml_ranker": 0.2
+    },
+    "risk_on_overheat": {
+      "trend_continuation": 0.25,
+      "valuation_repair": 0.15,
+      "risk_compression": 0.1,
+      "range_reversal": 0.2,
+      "defensive": 0.15,
+      "ml_ranker": 0.15
+    },
+    "range_bound": {
+      "trend_continuation": 0.15,
+      "valuation_repair": 0.25,
+      "risk_compression": 0.15,
+      "range_reversal": 0.25,
+      "defensive": 0.1,
+      "ml_ranker": 0.1
+    },
+    "risk_off_decline": {
+      "trend_continuation": 0.05,
+      "valuation_repair": 0.05,
+      "risk_compression": 0.1,
+      "range_reversal": 0.05,
+      "defensive": 0.65,
+      "ml_ranker": 0.1
+    },
+    "crash_rebound": {
+      "trend_continuation": 0.2,
+      "valuation_repair": 0.15,
+      "risk_compression": 0.3,
+      "range_reversal": 0.15,
+      "defensive": 0.1,
+      "ml_ranker": 0.1
+    }
+  },
+  "ensemble": {
+    "method": "state_prior_times_shrunk_icir_times_stability",
+    "rolling_icir_months": 24,
+    "icir_shrinkage_to_prior": 0.5,
+    "min_months_before_performance_weighting": 24,
+    "expert_weight_cap": 0.7
+  },
+  "portfolio": {
+    "construction_stage": "rank_plus_volatility_scaling",
+    "target_volatility_annualized": 0.12,
+    "target_volatility_band": [0.12, 0.16],
+    "cash_substitution": {
+      "enabled": true,
+      "defensive_min_final_score": 0.0,
+      "defensive_min_risk_compression_score": 0.0,
+      "allow_cash_when_low_quality_candidates": true
+    },
+    "drawdown_brake": {
+      "enabled": false,
+      "observation_only": true,
+      "portfolio_drawdown_trigger": -0.12,
+      "risk_multiplier": 0.7
+    },
+    "sleeve_budget_by_state": {
+      "risk_on_trend": {"style": 0.4, "industry": 0.5, "defensive": 0.1, "cash": 0.0},
+      "risk_on_overheat": {"style": 0.4, "industry": 0.35, "defensive": 0.15, "cash": 0.1},
+      "range_bound": {"style": 0.45, "industry": 0.25, "defensive": 0.2, "cash": 0.1},
+      "risk_off_decline": {"style": 0.2, "industry": 0.05, "defensive": 0.35, "cash": 0.4},
+      "crash_rebound": {"style": 0.35, "industry": 0.3, "defensive": 0.2, "cash": 0.15}
+    },
+    "constraints": {
+      "max_single_style_weight": 0.6,
+      "max_single_level1_industry_weight": 0.25,
+      "max_single_level2_industry_weight": 0.15,
+      "max_parent_industry_total_weight": 0.35,
+      "min_industry_holdings": 3,
+      "max_industry_holdings": 6,
+      "monthly_turnover_target_cap": 0.8
+    }
+  },
+  "risk_overlay": {
+    "market_breakdown": {
+      "broad_market_below_ma200": true,
+      "broad_market_ret60_negative": true,
+      "industry_below_ma60_ratio_trigger": 0.7
+    },
+    "style_collapse": {
+      "main_style_relative_ret20_trigger": -0.05,
+      "main_style_below_relative_ma60": true
+    },
+    "industry_crowding": {
+      "ret60_top_quantile": 0.1,
+      "amount_zscore_top_quantile": 0.1,
+      "score_discount": 0.7
+    }
+  },
+  "validation": {
+    "walk_forward": true,
+    "train_years": 5,
+    "validation_years": 1,
+    "test_years": 1,
+    "cost_bps_scenarios": [5, 10, 20],
+    "required_reports": ["annual", "regime", "ablation_expert", "ablation_factor_family", "turnover", "cost_sensitivity", "parameter_sensitivity", "pbo", "deflated_sharpe"]
+  }
+}

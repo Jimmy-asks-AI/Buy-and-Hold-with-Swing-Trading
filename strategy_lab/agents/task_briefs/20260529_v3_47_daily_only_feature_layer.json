@@ -1,0 +1,35 @@
+{
+  "task_id": "20260529_v3_47_daily_only_feature_layer",
+  "version": "V3.47",
+  "role": "feature_layer_engineer",
+  "objective": "Build the first downstream feature layer that legally uses the V3.46 accepted daily-only adapter for coverage, liquidity/activity, breadth, and raw intraday diagnostics.",
+  "fixed_inputs": [
+    "configs/daily_only_feature_layer_v3_47.json",
+    "strategy_lab/accepted_daily_only_adapter.py",
+    "outputs/agent_runs/v3_46/accepted_daily_only_adapter/agent_run_manifest.json",
+    "outputs/agent_runs/v3_45_1/daily_only_data_acceptance_quarantine/ohlc_quarantine_rows.csv"
+  ],
+  "outputs": [
+    "strategy_lab/daily_only_feature_layer.py",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/daily_market_feature_panel.csv",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/feature_dictionary.csv",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/asset_activity_sample.csv",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/feature_quality_checks.csv",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/feature_layer_report.md",
+    "data_catalog/a_share_daily_only_feature_layer_v3_47.md"
+  ],
+  "forbidden": [
+    "Do not read raw daily CSVs directly outside AcceptedDailyOnlyAdapter.",
+    "Do not compute adjusted returns, total returns, valuation, dividends, or portfolio performance.",
+    "Do not mutate raw source files.",
+    "Do not call network APIs."
+  ],
+  "acceptance": [
+    "All acquired dates must be processed through the accepted adapter.",
+    "Market feature rows must equal acquired daily files.",
+    "Accepted row totals must reconcile to V3.45.1 accepted processed rows.",
+    "Feature outputs must carry data_scope accepted_processed_daily_only and price_adjustment none_raw.",
+    "No bad OHLC rows may remain after adapter quarantine.",
+    "The report must state that no model or backtest promotion occurred."
+  ]
+}

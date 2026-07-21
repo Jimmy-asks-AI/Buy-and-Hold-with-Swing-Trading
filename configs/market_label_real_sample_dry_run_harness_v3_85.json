@@ -1,0 +1,42 @@
+{
+  "task_id": "20260602_v3_85_market_label_real_sample_dry_run_harness",
+  "v3_83_manifest_path": "outputs/agent_runs/v3_83/real_sample_ops_pack/agent_run_manifest.json",
+  "v3_84_manifest_path": "outputs/agent_runs/v3_84/legacy_governance_debt_gate/agent_run_manifest.json",
+  "v3_78_base_config_path": "configs/market_label_sample_intake_validator_v3_78.json",
+  "v3_80_base_config_path": "configs/market_label_raw_sample_registry_v3_80.json",
+  "v3_82_base_config_path": "configs/market_label_registered_sample_intake_orchestrator_v3_82.json",
+  "real_incoming_sample_dir": "data_raw/market_labels/incoming_samples",
+  "real_license_status_path": "data_raw/market_labels/incoming_samples/license_review_status.csv",
+  "real_target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_85/real_sample_intake_dry_run",
+  "catalog_path": "data_catalog/a_share_real_sample_intake_dry_run_v3_85.md",
+  "sandbox_root": "outputs/agent_runs/v3_85/real_sample_intake_dry_run/sandbox",
+  "sandbox_incoming_sample_dir": "outputs/agent_runs/v3_85/real_sample_intake_dry_run/sandbox/data_raw/market_labels/incoming_samples",
+  "sandbox_license_status_path": "outputs/agent_runs/v3_85/real_sample_intake_dry_run/sandbox/data_raw/market_labels/incoming_samples/license_review_status.csv",
+  "sandbox_target_source_path": "outputs/agent_runs/v3_85/real_sample_intake_dry_run/sandbox/data_raw/market_labels/market_total_return_index.csv",
+  "sandbox_registry_path": "outputs/agent_runs/v3_85/real_sample_intake_dry_run/sandbox/raw_sample_registry.csv",
+  "controlled_config_dir": "outputs/agent_runs/v3_85/real_sample_intake_dry_run/controlled_v3_78_configs",
+  "dry_run_sample_rows": 30,
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_83/real_sample_ops_pack/agent_run_manifest.json",
+    "outputs/agent_runs/v3_84/legacy_governance_debt_gate/agent_run_manifest.json",
+    "configs/market_label_sample_intake_validator_v3_78.json",
+    "configs/market_label_raw_sample_registry_v3_80.json",
+    "configs/market_label_registered_sample_intake_orchestrator_v3_82.json",
+    "data_raw/market_labels/incoming_samples",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "forbidden_now": [
+    "create_real_incoming_sample_directory",
+    "copy_real_raw_sample",
+    "write_real_license_status",
+    "write_official_target_source",
+    "run_v3_53",
+    "run_label_generation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion"
+  ]
+}

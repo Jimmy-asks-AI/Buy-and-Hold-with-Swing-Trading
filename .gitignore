@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# VitePress (在 guohao_vitepress 分支)
+docs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+.env
+.venv
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Local data credentials
+configs/data_credentials.json
+configs/*.local.json
+*.env.local
+
+# Local quantitative datasets and generated runs
+data_raw/
+outputs/
+
+# Generated review queues and rendered evidence
+data_catalog/*_queue.csv
+logs/rendered_pages/
+
+# Local account state and execution ledgers
+portfolio_lab/long_hold_v4/account.json
+portfolio_lab/long_hold_v4/pending_fills.csv
+portfolio_lab/long_hold_v4/pending_account_events.json
+portfolio_lab/long_hold_v4/fill_ledger.csv
+portfolio_lab/long_hold_v4/account_event_ledger.csv
+portfolio_lab/long_hold_v4/nav_ledger.csv

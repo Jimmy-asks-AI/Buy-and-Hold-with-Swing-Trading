@@ -1,0 +1,41 @@
+{
+  "task_id": "20260529_v3_53_market_total_return_label_importer",
+  "source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "signal_panel_path": "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+  "output_dir": "outputs/agent_runs/v3_53/market_total_return_label_importer",
+  "catalog_path": "data_catalog/a_share_market_total_return_label_importer_v3_53.md",
+  "horizons": [
+    1,
+    5,
+    20,
+    60
+  ],
+  "market_proxy_codes": [
+    "MARKET",
+    "000985",
+    "000985.SH",
+    "000300",
+    "000300.SH",
+    "000905",
+    "000905.SH",
+    "000016",
+    "000016.SH"
+  ],
+  "source_asset_priority": [
+    "MARKET",
+    "000985",
+    "000985.SH",
+    "000300",
+    "000300.SH"
+  ],
+  "min_source_rows": 1000,
+  "min_signal_coverage_ratio": 0.8,
+  "forbidden_now": [
+    "accept_backtest_nav",
+    "accept_price_only_index_close",
+    "accept_raw_unadjusted_close",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "model_promotion"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "cost_bps",
+      "test_year",
+      "selected_variant",
+      "selection_status",
+      "outer_train_start",
+      "outer_train_end",
+      "inner_validation_start",
+      "inner_validation_end",
+      "test_start",
+      "test_end",
+      "train_days",
+      "inner_validation_days",
+      "test_days",
+      "embargo_days",
+      "split_rule",
+      "test_data_used_for_selection"
+    ],
+    "properties": {
+      "cost_bps": { "type": "number" },
+      "test_year": { "type": "integer" },
+      "selected_variant": { "type": "string" },
+      "selection_status": { "type": "string" },
+      "outer_train_start": { "type": "string" },
+      "outer_train_end": { "type": "string" },
+      "inner_train_start": { "type": "string" },
+      "inner_train_end": { "type": "string" },
+      "inner_validation_start": { "type": "string" },
+      "inner_validation_end": { "type": "string" },
+      "test_start": { "type": "string" },
+      "test_end": { "type": "string" },
+      "train_days": { "type": "integer" },
+      "inner_train_days": { "type": "integer" },
+      "inner_validation_days": { "type": "integer" },
+      "test_days": { "type": "integer" },
+      "purge_days": { "type": "integer" },
+      "embargo_days": { "type": "integer" },
+      "split_rule": { "type": "string" },
+      "test_data_used_for_selection": { "type": "boolean" }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "task_id": "20260529_v3_56_limited_proxy_label_chain_test",
+  "proxy_source_path": "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/normalized_proxy_series.csv",
+  "signal_panel_path": "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+  "output_dir": "outputs/agent_runs/v3_56/limited_proxy_label_chain_test",
+  "catalog_path": "data_catalog/a_share_limited_proxy_label_chain_test_v3_56.md",
+  "horizons": [
+    1,
+    5,
+    20,
+    60
+  ],
+  "min_source_rows": 200,
+  "min_signal_rows": 1000,
+  "min_label_rows": 100,
+  "min_limited_coverage_ratio": 0.95,
+  "market_proxy_codes": [
+    "MARKET",
+    "000985",
+    "000985.XSHG"
+  ],
+  "source_asset_priority": [
+    "MARKET",
+    "000985.XSHG",
+    "000985"
+  ],
+  "forbidden_now": [
+    "write_official_market_total_return_source",
+    "run_ic_or_hit_rate",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "model_promotion",
+    "claim_full_history_performance"
+  ]
+}

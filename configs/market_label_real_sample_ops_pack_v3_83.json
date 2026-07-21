@@ -1,0 +1,36 @@
+{
+  "task_id": "20260601_v3_83_market_label_real_sample_ops_pack",
+  "v3_82_manifest_path": "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/agent_run_manifest.json",
+  "v3_80_registry_template_path": "outputs/agent_runs/v3_80/market_label_raw_sample_registry/raw_sample_registry_template.csv",
+  "v3_78_config_path": "configs/market_label_sample_intake_validator_v3_78.json",
+  "v3_75_vendor_template_path": "outputs/agent_runs/v3_75/label_source_procurement_pack/market_total_return_index.vendor_template.csv",
+  "incoming_sample_dir": "data_raw/market_labels/incoming_samples",
+  "license_evidence_dir": "outputs/agent_runs/v3_80/license_evidence",
+  "license_status_path": "data_raw/market_labels/incoming_samples/license_review_status.csv",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_83/real_sample_ops_pack",
+  "catalog_path": "data_catalog/a_share_real_sample_ops_pack_v3_83.md",
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/agent_run_manifest.json",
+    "outputs/agent_runs/v3_80/market_label_raw_sample_registry/raw_sample_registry_template.csv",
+    "configs/market_label_sample_intake_validator_v3_78.json",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/market_total_return_index.vendor_template.csv",
+    "data_raw/market_labels/incoming_samples",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "forbidden_now": [
+    "create_incoming_sample_directory",
+    "copy_raw_sample",
+    "write_license_status_in_place",
+    "write_official_target_source",
+    "run_v3_78",
+    "run_v3_53",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion"
+  ]
+}

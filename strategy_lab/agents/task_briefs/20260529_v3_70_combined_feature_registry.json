@@ -1,0 +1,87 @@
+{
+  "task_id": "20260529_v3_70_combined_feature_registry",
+  "parent_id": "20260529_v3_69_macro_growth_liquidity_features",
+  "version": "V3.70",
+  "assigned_agent": "factor_researcher",
+  "status": "ready",
+  "objective": "Build a governed combined feature registry by joining V3.67 market, V3.68 industry, and V3.69 macro feature panels on signal_use_date; do not create labels, portfolio outputs, or model promotion evidence.",
+  "baseline": {
+    "version": "V3.67/V3.68/V3.69",
+    "script": "strategy_lab/hirssm_v3_70_combined_feature_registry.py",
+    "output_dir": "outputs/agent_runs/v3_70/combined_feature_registry",
+    "metrics_to_compare": [
+      "combined_rows",
+      "full_source_rows",
+      "validation_ready_rows",
+      "feature_registry_rows"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/combined_feature_registry_v3_70.json",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/agent_run_manifest.json",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/market_participation_breadth_feature_panel.csv",
+    "outputs/agent_runs/v3_68/industry_breadth_dispersion_features/agent_run_manifest.json",
+    "outputs/agent_runs/v3_68/industry_breadth_dispersion_features/industry_breadth_dispersion_feature_panel.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/agent_run_manifest.json",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/macro_asof_feature_panel.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/combined_feature_registry.py",
+    "strategy_lab/hirssm_v3_70_combined_feature_registry.py",
+    "configs/combined_feature_registry_v3_70.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_70_combined_feature_registry.json",
+    "outputs/agent_runs/v3_70/combined_feature_registry/",
+    "data_catalog/a_share_combined_feature_registry_v3_70.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_67_market_participation_breadth_features",
+    "20260529_v3_68_industry_breadth_dispersion_features",
+    "20260529_v3_69_macro_growth_liquidity_features"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_70/combined_feature_registry/input_checks.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/combined_feature_panel.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/feature_registry.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/source_alignment_checks.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/feature_coverage_report.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/readiness_by_year.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/feature_contract.md",
+    "outputs/agent_runs/v3_70/combined_feature_registry/feature_quality_checks.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/acceptance_checks.csv",
+    "outputs/agent_runs/v3_70/combined_feature_registry/combined_feature_registry_report.md",
+    "outputs/agent_runs/v3_70/combined_feature_registry/agent_run_manifest.json",
+    "data_catalog/a_share_combined_feature_registry_v3_70.md"
+  ],
+  "forbidden": [
+    "Do not run a portfolio backtest.",
+    "Do not generate NAV, Sharpe, drawdown, annualized return, or portfolio-return outputs.",
+    "Do not create return labels or IC evidence.",
+    "Do not use current component snapshots or latest weights.",
+    "Do not claim official total-return evidence.",
+    "Do not promote any feature into the default model."
+  ],
+  "acceptance_criteria": [
+    "All three source manifests must pass their own self checks.",
+    "All three source panels must contain trade_date, signal_use_date, and history_sufficient.",
+    "The combined panel must have at least 6000 rows and at least 6000 full-source rows.",
+    "The combined panel must have at least 4500 validation-ready rows.",
+    "The feature registry must register at least 150 source features with source version and family metadata.",
+    "No output CSV column contains forbidden performance or promotion terms."
+  ],
+  "failure_conditions": [
+    "Any output allows portfolio harness or model promotion.",
+    "Any label, NAV, Sharpe, drawdown, annualized return, or portfolio-return output is produced.",
+    "Any source row is joined on a future signal date or mismatched source row count.",
+    "Any credential appears outside configs/data_credentials.json."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Forbidden performance or promotion column scan returns zero hits.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "backtest_validation_auditor should design V3.71 guarded feature-label validation using this registry and an explicitly permitted label source."
+}

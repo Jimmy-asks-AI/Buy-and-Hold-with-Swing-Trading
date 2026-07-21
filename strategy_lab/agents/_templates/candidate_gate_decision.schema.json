@@ -1,0 +1,40 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "cost_bps",
+      "decision",
+      "annual_delta_vs_v310",
+      "drawdown_delta_vs_v310",
+      "sharpe_delta_vs_v310",
+      "pbo",
+      "nonbaseline_selection_rate",
+      "annual_delta_positive_50bps",
+      "drawdown_not_worse_3pct",
+      "avg_cash_not_excessive",
+      "pbo_not_fail",
+      "candidate_selected_enough",
+      "overall_decision"
+    ],
+    "properties": {
+      "cost_bps": { "type": "number" },
+      "decision": {
+        "enum": ["promote_candidate", "reject_for_default_observation_only", "blocked"]
+      },
+      "annual_delta_vs_v310": { "type": "number" },
+      "drawdown_delta_vs_v310": { "type": "number" },
+      "sharpe_delta_vs_v310": { "type": "number" },
+      "pbo": { "type": "number" },
+      "nonbaseline_selection_rate": { "type": "number" },
+      "annual_delta_positive_50bps": { "type": "boolean" },
+      "drawdown_not_worse_3pct": { "type": "boolean" },
+      "avg_cash_not_excessive": { "type": "boolean" },
+      "pbo_not_fail": { "type": "boolean" },
+      "candidate_selected_enough": { "type": "boolean" },
+      "overall_decision": {
+        "enum": ["promote_candidate", "reject_for_default_observation_only", "blocked"]
+      }
+    }
+  }
+}

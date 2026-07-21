@@ -1,0 +1,83 @@
+{
+  "task_id": "20260601_v3_82_market_label_registered_sample_intake_orchestrator",
+  "parent_id": "20260601_v3_81_market_label_raw_registry_fixture_harness",
+  "version": "V3.82",
+  "assigned_agent": "data_steward",
+  "status": "ready",
+  "objective": "Create a controlled orchestrator that routes only V3.80 registry-approved real samples toward V3.78 sample validation without copying raw files, executing downstream validation by default, or writing official labels.",
+  "baseline": {
+    "version": "V3.81",
+    "script": "strategy_lab/hirssm_v3_82_market_label_registered_sample_intake_orchestrator.py",
+    "output_dir": "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator",
+    "metrics_to_compare": [
+      "registry_rows",
+      "eligible_registered_sample_count",
+      "controlled_v3_78_config_count",
+      "execute_v3_78",
+      "may_execute_v3_78_now",
+      "may_execute_v3_53_now"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/market_label_registered_sample_intake_orchestrator_v3_82.json",
+    "outputs/agent_runs/v3_80/market_label_raw_sample_registry/agent_run_manifest.json",
+    "outputs/agent_runs/v3_80/market_label_raw_sample_registry/raw_sample_registry.csv",
+    "outputs/agent_runs/v3_81/market_label_raw_registry_fixture_harness/agent_run_manifest.json",
+    "configs/market_label_sample_intake_validator_v3_78.json",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "allowed_writes": [
+    "strategy_lab/market_label_registered_sample_intake_orchestrator.py",
+    "strategy_lab/hirssm_v3_82_market_label_registered_sample_intake_orchestrator.py",
+    "configs/market_label_registered_sample_intake_orchestrator_v3_82.json",
+    "strategy_lab/agents/task_briefs/20260601_v3_82_market_label_registered_sample_intake_orchestrator.json",
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/",
+    "data_catalog/a_share_registered_sample_intake_orchestrator_v3_82.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260601_v3_80_market_label_raw_sample_registry",
+    "20260601_v3_81_market_label_raw_registry_fixture_harness",
+    "20260601_v3_78_market_label_sample_intake_validator"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/registry_route_snapshot.csv",
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/eligible_registered_samples.csv",
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/controlled_v3_78_plan.csv",
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/v3_78_execution_plan.csv",
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/no_execution_guard.csv",
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/acceptance_checks.csv",
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/registered_sample_intake_orchestrator_report.md",
+    "outputs/agent_runs/v3_82/registered_sample_intake_orchestrator/agent_run_manifest.json",
+    "data_catalog/a_share_registered_sample_intake_orchestrator_v3_82.md"
+  ],
+  "forbidden": [
+    "Do not copy raw samples.",
+    "Do not write data_raw/market_labels/market_total_return_index.csv.",
+    "Do not execute V3.78 unless execute_v3_78 is explicitly true and an eligible registry row exists.",
+    "Do not run V3.53 or generate labels.",
+    "Do not run portfolio validation, NAV, Sharpe, drawdown, annualized return, portfolio-return, or model promotion outputs."
+  ],
+  "acceptance_criteria": [
+    "Registry route snapshot is written for both eligible and blocked states.",
+    "If no eligible registered sample exists, V3.78 execution plan is blocked.",
+    "If eligible samples exist, controlled V3.78 config plans are written but not executed by default.",
+    "V3.80 and V3.81 manifests are checked.",
+    "Target CSV write and V3.53 execution remain blocked."
+  ],
+  "failure_conditions": [
+    "Raw samples are copied by this task.",
+    "The target CSV is written by this task.",
+    "V3.78 is executed while execute_v3_78=false.",
+    "Any label, portfolio, or model-promotion output is generated.",
+    "Any credential appears in outputs."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Forbidden performance or promotion output scan returns zero hits.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "When V3.80 reports an eligible real sample, rerun V3.82 and manually execute the generated V3.78 command."
+}

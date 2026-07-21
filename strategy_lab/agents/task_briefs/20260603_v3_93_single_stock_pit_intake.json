@@ -1,0 +1,73 @@
+{
+  "task_id": "20260603_v3_93_single_stock_pit_intake",
+  "parent_id": "20260602_v3_92_sample_research_run",
+  "version": "V3.93",
+  "assigned_agent": "data_steward",
+  "status": "accepted",
+  "objective": "Build a single-stock point-in-time data readiness pilot that separates adjusted price research data, raw daily price data, and current fundamental snapshots before any stock-level research model uses them.",
+  "baseline": {
+    "version": "V3.92",
+    "script": "strategy_lab/hirssm_v3_86_to_v3_92_quant_research_assistant.py",
+    "output_dir": "outputs/agent_runs/v3_92/sample_research_run/",
+    "metrics_to_compare": ["object_count", "pipeline_pass_count", "sample_boundary_fail_count"]
+  },
+  "allowed_inputs": [
+    "configs/quant_research_assistant_v3_93_single_stock_pit_intake.json",
+    "data_raw/akshare/stock_list/",
+    "data_raw/akshare/daily_qfq/",
+    "data_raw/akshare/financial_indicator/",
+    "data_raw/tushare_daily_only/v3_38/daily/",
+    "outputs/agent_runs/v3_92/sample_research_run/"
+  ],
+  "allowed_writes": [
+    "outputs/agent_runs/v3_93/single_stock_pit_intake/",
+    "data_catalog/a_share_single_stock_pit_intake_v3_93.md"
+  ],
+  "dependencies": ["20260602_v3_92_sample_research_run"],
+  "required_outputs": [
+    "single_stock_research_universe.csv",
+    "single_stock_price_coverage.csv",
+    "single_stock_fundamental_snapshot.csv",
+    "single_stock_pit_readiness.csv",
+    "single_stock_data_gap_register.csv",
+    "single_stock_boundary_audit.csv",
+    "single_stock_intake_decision.md",
+    "agent_report.md",
+    "data_dictionary.csv",
+    "acceptance_checks.csv",
+    "self_check.csv",
+    "agent_run_manifest.json",
+    "data_catalog/a_share_single_stock_pit_intake_v3_93.md"
+  ],
+  "forbidden": [
+    "Do not use AkShare financial_indicator history for historical backtests without available_date.",
+    "Do not treat qfq prices without row-level available_date as PIT-safe adjusted-return labels.",
+    "Do not mix Tushare raw unadjusted daily prices with adjusted price return labels without explicit flags.",
+    "Do not make alpha, order, portfolio, or strategy-performance claims in this data intake task."
+  ],
+  "acceptance_criteria": [
+    "All configured stocks are listed in the research universe.",
+    "Each source has coverage and PIT status records.",
+    "AkShare financial snapshots are blocked from historical backtests.",
+    "AkShare qfq prices are marked research-only until row-level availability is controlled.",
+    "Tushare raw daily rows with available_date are isolated as raw price-state data only.",
+    "Data gaps are recorded with owner and severity.",
+    "Boundary audit has zero fails.",
+    "Catalog and manifest exist."
+  ],
+  "failure_conditions": [
+    "Any fundamental snapshot is allowed into historical backtests without available_date.",
+    "Any qfq adjusted series is approved as PIT total-return label without available_date.",
+    "Any output claims a tradable stock strategy result.",
+    "Missing required output file.",
+    "Global agent framework check fails."
+  ],
+  "quality_gates": [
+    "CSV outputs parse successfully.",
+    "Boundary audit exists and has no fail status.",
+    "Acceptance checks have no fail status.",
+    "Agent manifest paths exist.",
+    "Data catalog documents source restrictions."
+  ],
+  "next_handoff": "fundamental_equity_analyst"
+}

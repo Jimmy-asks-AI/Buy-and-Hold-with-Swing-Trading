@@ -1,0 +1,46 @@
+{
+  "task_id": "20260601_v3_80_market_label_raw_sample_registry",
+  "v3_78_manifest_path": "outputs/agent_runs/v3_78/market_label_sample_intake_validator/agent_run_manifest.json",
+  "v3_79_manifest_path": "outputs/agent_runs/v3_79/market_label_sample_fixture_harness/agent_run_manifest.json",
+  "incoming_sample_dir": "data_raw/market_labels/incoming_samples",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "previous_registry_path": "outputs/agent_runs/v3_80/market_label_raw_sample_registry/raw_sample_registry.csv",
+  "license_status_path": "data_raw/market_labels/incoming_samples/license_review_status.csv",
+  "output_dir": "outputs/agent_runs/v3_80/market_label_raw_sample_registry",
+  "catalog_path": "data_catalog/a_share_market_label_raw_sample_registry_v3_80.md",
+  "approved_source_tokens": [
+    "csindex_official_total_return_service",
+    "wind_choice_ifind_total_return_index",
+    "China Securities Index",
+    "CSI",
+    "Wind",
+    "Choice",
+    "iFinD"
+  ],
+  "allowed_extensions": [
+    ".csv"
+  ],
+  "license_approved_values": [
+    "approved_internal_research",
+    "approved_research_and_derived_labels"
+  ],
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_78/market_label_sample_intake_validator/agent_run_manifest.json",
+    "outputs/agent_runs/v3_79/market_label_sample_fixture_harness/agent_run_manifest.json",
+    "data_raw/market_labels/incoming_samples/*.csv",
+    "data_raw/market_labels/incoming_samples/license_review_status.csv",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "forbidden_now": [
+    "write_official_target_source",
+    "run_v3_78",
+    "run_v3_53",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion"
+  ]
+}

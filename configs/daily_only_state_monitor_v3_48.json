@@ -1,0 +1,25 @@
+{
+  "task_id": "20260529_v3_48_daily_only_state_monitor",
+  "feature_panel_path": "outputs/agent_runs/v3_47/daily_only_feature_layer/daily_market_feature_panel.csv",
+  "feature_layer_manifest_path": "outputs/agent_runs/v3_47/daily_only_feature_layer/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_48/daily_only_state_monitor",
+  "catalog_path": "data_catalog/a_share_daily_only_state_monitor_v3_48.md",
+  "trailing_window": 252,
+  "min_history": 60,
+  "stress_pctile": 0.2,
+  "recovery_pctile": 0.8,
+  "crowding_pctile": 0.85,
+  "calm_pctile": 0.15,
+  "min_active_asset_ratio": 0.95,
+  "breadth_stress_advance_ratio": 0.35,
+  "breadth_recovery_advance_ratio": 0.55,
+  "limit_crowding_pctile": 0.9,
+  "minimum_limit_share": 0.003,
+  "forbidden_columns_keywords": [
+    "adjusted_return",
+    "total_return",
+    "valuation",
+    "dividend_yield",
+    "portfolio_performance"
+  ]
+}

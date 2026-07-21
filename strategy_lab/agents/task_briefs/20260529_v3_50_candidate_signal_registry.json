@@ -1,0 +1,36 @@
+{
+  "task_id": "20260529_v3_50_candidate_signal_registry",
+  "version": "V3.50",
+  "role": "signal_registry_engineer",
+  "objective": "Create a governed candidate signal registry and generate a signal panel that conforms to the V3.49 signal contract, using only V3.48 diagnostic state data.",
+  "fixed_inputs": [
+    "configs/candidate_signal_registry_v3_50.json",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/signal_panel_contract.csv"
+  ],
+  "outputs": [
+    "strategy_lab/candidate_signal_registry.py",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/candidate_signal_registry.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_summary.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/state_signal_coverage.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel_contract_check.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/no_performance_guard.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/candidate_signal_report.md",
+    "data_catalog/a_share_candidate_signal_registry_v3_50.md"
+  ],
+  "forbidden": [
+    "Do not read raw daily CSVs.",
+    "Do not compute forward returns from raw or unadjusted close.",
+    "Do not validate IC, win rate, returns, or drawdowns.",
+    "Do not run a portfolio backtest.",
+    "Do not promote any candidate signal into a model."
+  ],
+  "acceptance": [
+    "Candidate registry must have stable signal_id and governance metadata.",
+    "Signal panel must satisfy V3.49 signal_panel_contract required columns.",
+    "Signal rows must be generated only from V3.48 history-available quality_ok states.",
+    "No return, PnL, NAV, Sharpe, drawdown, or performance columns may be produced.",
+    "The report must state that no performance validation occurred."
+  ]
+}

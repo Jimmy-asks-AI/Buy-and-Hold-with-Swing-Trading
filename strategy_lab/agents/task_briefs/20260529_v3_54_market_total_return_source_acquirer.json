@@ -1,0 +1,38 @@
+{
+  "task_id": "20260529_v3_54_market_total_return_source_acquirer",
+  "version": "V3.54",
+  "role": "market_total_return_source_acquisition_engineer",
+  "objective": "Create a governed acquisition router for the MARKET total-return source required by V3.53 without promoting price-only data.",
+  "fixed_inputs": [
+    "configs/market_total_return_source_acquirer_v3_54.json",
+    "data_raw/index/akshare_csindex/index_list/index_csindex_all.csv",
+    "data_raw/market_labels/market_total_return_index.csv",
+    "outputs/agent_runs/v3_53/market_total_return_label_importer/market_total_return_source_contract.csv"
+  ],
+  "outputs": [
+    "strategy_lab/market_total_return_source_acquirer.py",
+    "strategy_lab/hirssm_v3_54_market_total_return_source_acquirer.py",
+    "outputs/agent_runs/v3_54/market_total_return_source_acquirer/provider_readiness.csv",
+    "outputs/agent_runs/v3_54/market_total_return_source_acquirer/total_return_candidate_discovery.csv",
+    "outputs/agent_runs/v3_54/market_total_return_source_acquirer/acquisition_routes.csv",
+    "outputs/agent_runs/v3_54/market_total_return_source_acquirer/acquisition_log.csv",
+    "outputs/agent_runs/v3_54/market_total_return_source_acquirer/source_acquisition_readiness_checks.csv",
+    "outputs/agent_runs/v3_54/market_total_return_source_acquirer/manual_total_return_source_instructions.md",
+    "outputs/agent_runs/v3_54/market_total_return_source_acquirer/market_total_return_source_acquirer_report.md",
+    "data_catalog/a_share_market_total_return_source_acquirer_v3_54.md"
+  ],
+  "forbidden": [
+    "Do not accept price-only index close as total-return source.",
+    "Do not accept strategy NAV, benchmark NAV, or backtest-derived files.",
+    "Do not print or write real credentials, tokens, passwords, or cookies.",
+    "Do not run V3.53 labels or V3.49 validation in this version.",
+    "Do not run portfolio backtests or model promotion."
+  ],
+  "acceptance": [
+    "Provider readiness must be reported without secrets.",
+    "CSIndex total-return candidates must be discovered from explicit total-return keywords.",
+    "Every acquisition route must have a ready/blocker status and acceptance note.",
+    "If no certified source is acquired, the target source must remain missing and validation blocked.",
+    "Manual instructions must tell the user exactly what CSV contract unblocks V3.53."
+  ]
+}

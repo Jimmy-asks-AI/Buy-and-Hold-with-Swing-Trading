@@ -1,0 +1,23 @@
+{
+  "task_id": "20260602_v3_90_research_view_synthesizer",
+  "parent_id": "20260602_v3_89_fundamental_factor_engine",
+  "version": "V3.90",
+  "assigned_agent": "investment_view_synthesizer",
+  "status": "accepted",
+  "objective": "Synthesize technical and fundamental evidence into object-level research views with confidence caps and invalidation rules.",
+  "baseline": {
+    "version": "V3.89",
+    "script": "strategy_lab/hirssm_v3_86_to_v3_92_quant_research_assistant.py",
+    "output_dir": "outputs/agent_runs/v3_89/fundamental_factor_engine/",
+    "metrics_to_compare": ["object_count", "gap_count"]
+  },
+  "allowed_inputs": ["outputs/agent_runs/v3_88/technical_signal_engine/", "outputs/agent_runs/v3_89/fundamental_factor_engine/"],
+  "allowed_writes": ["outputs/agent_runs/v3_90/research_view_synthesizer/"],
+  "dependencies": ["20260602_v3_88_technical_signal_engine", "20260602_v3_89_fundamental_factor_engine"],
+  "required_outputs": ["synthesized_research_views.csv", "decision_trace.csv", "synthesis_formula_spec.csv", "synthesis_score_reconciliation.csv", "synthesis_input_contract_check.csv", "synthesis_method_note.md", "agent_run_manifest.json"],
+  "forbidden": ["Do not convert research views into order instructions.", "Do not hide agent disagreement.", "Do not emit directional final views when technical and fundamental inputs hard-conflict.", "Do not treat latest synthesized rows as historical backtest features."],
+  "acceptance_criteria": ["One synthesized view per object.", "Confidence is bounded.", "Decision trace explains evidence and confidence caps.", "Hard conflicts are capped into neutral final views.", "Research-only, no-order, no-portfolio, and no-backtest boundaries are explicit.", "Synthesized scores recompute from synthesis_formula_spec.csv."],
+  "failure_conditions": ["Missing decision trace.", "Final score outside 0 to 1.", "Hard conflict emitted as bullish or bearish.", "Synthesized row allowed as an order, portfolio weight, or historical backtest feature.", "Synthesis score reconciliation fails."],
+  "quality_gates": ["CSV files parse.", "Formula/reconciliation files pass.", "Synthesis input contract passes.", "Manifest paths exist.", "Known limitations are recorded."],
+  "next_handoff": "research_reporter"
+}

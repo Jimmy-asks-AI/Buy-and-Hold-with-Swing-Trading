@@ -1,0 +1,27 @@
+{
+    "task_id":  "20260529_v3_55_joinquant_market_proxy_probe",
+    "output_dir":  "outputs/agent_runs/v3_55/joinquant_market_proxy_probe",
+    "catalog_path":  "data_catalog/a_share_joinquant_market_proxy_probe_v3_55.md",
+    "target_source_path":  "data_raw/market_labels/market_total_return_index.csv",
+    "target_security":  "000985.XSHG",
+    "target_asset_or_index":  "MARKET",
+    "start_date":  "2025-02-18",
+    "end_date":  "2026-02-25",
+    "fields":  [
+                   "close"
+               ],
+    "fq":  "pre",
+    "execute_probe":  false,
+    "allow_adjusted_proxy_write":  false,
+    "approved_proxy_basis":  "none",
+    "allow_overwrite_target":  false,
+    "forbidden_now":  [
+                          "print_credentials",
+                          "write_unapproved_proxy_as_total_return",
+                          "treat_get_price_as_certified_total_return",
+                          "run_label_generation",
+                          "run_state_validation",
+                          "run_portfolio_backtest",
+                          "model_promotion"
+                      ]
+}

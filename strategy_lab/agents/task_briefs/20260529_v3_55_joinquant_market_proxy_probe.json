@@ -1,0 +1,38 @@
+{
+  "task_id": "20260529_v3_55_joinquant_market_proxy_probe",
+  "version": "V3.55",
+  "role": "joinquant_market_proxy_probe_engineer",
+  "objective": "Add a guarded JoinQuant get_price probe for a MARKET proxy sequence without promoting ordinary price data as a total-return label source.",
+  "fixed_inputs": [
+    "configs/joinquant_market_proxy_probe_v3_55.json",
+    "configs/data_credentials.json",
+    "outputs/agent_runs/v3_54/market_total_return_source_acquirer/acquisition_routes.csv",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "outputs": [
+    "strategy_lab/joinquant_market_proxy_probe.py",
+    "strategy_lab/hirssm_v3_55_joinquant_market_proxy_probe.py",
+    "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/joinquant_readiness.csv",
+    "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/probe_plan.csv",
+    "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/probe_result.csv",
+    "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/write_policy.csv",
+    "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/joinquant_credential_instructions.md",
+    "outputs/agent_runs/v3_55/joinquant_market_proxy_probe/joinquant_market_proxy_probe_report.md",
+    "data_catalog/a_share_joinquant_market_proxy_probe_v3_55.md"
+  ],
+  "forbidden": [
+    "Do not print, write, or leak JoinQuant credentials.",
+    "Do not call JoinQuant unless execute_probe is explicitly enabled.",
+    "Do not write market_total_return_index.csv unless adjusted proxy write approval is explicit.",
+    "Do not treat ordinary get_price output as official total-return data.",
+    "Do not run labels, IC, hit rate, backtests, NAV, Sharpe, drawdown, or model promotion."
+  ],
+  "acceptance": [
+    "Credential readiness must be boolean/generic only.",
+    "Probe plan must state that probe success is not total-return-source acceptance.",
+    "Write policy must separately reject certified-total-return promotion.",
+    "Missing credentials must block execution.",
+    "No performance validation or model promotion may be produced."
+  ]
+}

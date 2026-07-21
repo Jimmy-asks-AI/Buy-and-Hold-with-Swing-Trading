@@ -1,0 +1,46 @@
+{
+  "task_id": "20260529_v3_67_market_participation_breadth_features",
+  "v3_66_manifest_path": "outputs/agent_runs/v3_66/independent_pit_source_discovery/agent_run_manifest.json",
+  "v3_66_queue_path": "outputs/agent_runs/v3_66/independent_pit_source_discovery/next_validation_queue.csv",
+  "v3_66_inventory_path": "outputs/agent_runs/v3_66/independent_pit_source_discovery/source_inventory.csv",
+  "v3_44_guard_manifest_path": "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/agent_run_manifest.json",
+  "v3_44_capability_matrix_path": "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/research_capability_matrix.csv",
+  "v3_47_manifest_path": "outputs/agent_runs/v3_47/daily_only_feature_layer/agent_run_manifest.json",
+  "v3_47_feature_panel_path": "outputs/agent_runs/v3_47/daily_only_feature_layer/daily_market_feature_panel.csv",
+  "v3_48_manifest_path": "outputs/agent_runs/v3_48/daily_only_state_monitor/agent_run_manifest.json",
+  "v3_48_state_panel_path": "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+  "raw_partition_dir": "data_raw/tushare_daily_only/v3_38/daily",
+  "output_dir": "outputs/agent_runs/v3_67/market_participation_breadth_features",
+  "catalog_path": "data_catalog/a_share_market_participation_breadth_features_v3_67.md",
+  "feature_parameters": {
+    "min_history": 60,
+    "trailing_window": 252,
+    "breadth_short_window": 5,
+    "breadth_medium_window": 20,
+    "breadth_long_window": 60
+  },
+  "quality_thresholds": {
+    "min_feature_rows": 6000,
+    "min_latest_asset_count": 4000
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/agent_run_manifest.json",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/next_validation_queue.csv",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/research_capability_matrix.csv",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/daily_market_feature_panel.csv",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+    "data_raw/tushare_daily_only/v3_38/daily/"
+  ],
+  "forbidden_now": [
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "write_annualized_return",
+    "write_portfolio_return",
+    "model_promotion",
+    "default_enablement",
+    "stock_return_label_from_unadjusted_raw_prices",
+    "adjusted_return_from_raw_close"
+  ]
+}

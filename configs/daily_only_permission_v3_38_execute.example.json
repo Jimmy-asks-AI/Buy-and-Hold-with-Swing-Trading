@@ -1,0 +1,53 @@
+{
+  "task_id": "20260528_v3_38_daily_only_permission_profile",
+  "execute": true,
+  "allow_network": true,
+  "provider": "tushare",
+  "permission_profile": "daily_only_120_points",
+  "daily_endpoint": "daily",
+  "start_date": "20000101",
+  "end_date": "20260528",
+  "output_root": "data_raw/tushare_daily_only/v3_38",
+  "max_new_trade_dates": 30,
+  "sleep_seconds_between_calls": 1.35,
+  "reuse_existing_outputs": true,
+  "blocked_endpoints": [
+    {
+      "endpoint": "stock_basic",
+      "needed_for": "all-status universe, delisting lifecycle, listing dates",
+      "current_status": "permission_blocked",
+      "fallback": "derive traded universe from daily rows by trade_date; no listing lifecycle yet"
+    },
+    {
+      "endpoint": "daily_basic",
+      "needed_for": "valuation, turnover, market cap, PE/PB factors",
+      "current_status": "permission_blocked",
+      "fallback": "defer valuation factors; use price/volume-only factors"
+    },
+    {
+      "endpoint": "adj_factor",
+      "needed_for": "复权收益, split/dividend-adjusted prices",
+      "current_status": "permission_blocked",
+      "fallback": "use raw close only; do not compute total-return or qfq factors"
+    },
+    {
+      "endpoint": "index_weight",
+      "needed_for": "historical index constituents and PIT index weights",
+      "current_status": "permission_blocked",
+      "fallback": "defer index constituent PIT research"
+    },
+    {
+      "endpoint": "index_dailybasic",
+      "needed_for": "index valuation and index-level PE/PB",
+      "current_status": "permission_blocked",
+      "fallback": "defer index valuation repair"
+    }
+  ],
+  "quality_policy": {
+    "raw_price_only": true,
+    "no_adjusted_return": true,
+    "no_valuation_factor": true,
+    "no_index_constituent_pit": true,
+    "allow_price_volume_research_after_quality_review": true
+  }
+}

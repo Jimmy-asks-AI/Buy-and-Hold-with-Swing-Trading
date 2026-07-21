@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "reviewed_as_of": "2026-07-18",
+  "activation_rule": "Only active entries may be consumed by the current ETF snapshot builder. A code found in a factsheet is not sufficient; price history, total-return history, valuation identity, and local cache must all pass.",
+  "mappings": [
+    {
+      "tracking_index_name": "上证红利指数",
+      "provider": "csindex",
+      "price_code": "000015",
+      "total_return_code": "H00015",
+      "total_return_name": "上证红利全收益指数",
+      "status": "active",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": true,
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000015factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证红利指数",
+      "provider": "csindex",
+      "price_code": "000922",
+      "total_return_code": "H00922",
+      "total_return_name": "中证红利全收益指数",
+      "status": "active",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": true,
+      "observed_etf_count": 5,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000922factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证红利低波动指数",
+      "provider": "csindex",
+      "price_code": "H30269",
+      "total_return_code": "H20269",
+      "total_return_name": "中证红利低波动全收益指数",
+      "status": "active",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": true,
+      "observed_etf_count": 6,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/H30269factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证中央企业红利指数",
+      "provider": "csindex",
+      "price_code": "000825",
+      "total_return_code": "H00825",
+      "total_return_name": "中证中央企业红利全收益指数",
+      "status": "active",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": true,
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000825factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "沪深300红利低波动指数",
+      "provider": "csindex",
+      "price_code": "930740",
+      "total_return_code": "H20740",
+      "total_return_name": "沪深300红利低波动全收益指数",
+      "status": "active",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": true,
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/930740factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证红利低波动100指数",
+      "provider": "csindex",
+      "price_code": "930955",
+      "total_return_code": "H20955",
+      "total_return_name": "中证红利低波动100全收益指数",
+      "status": "verified_pending_history_cache",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": false,
+      "observed_etf_count": 3,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/930955factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证红利质量指数",
+      "provider": "csindex",
+      "price_code": "931468",
+      "total_return_code": "921468",
+      "total_return_name": "中证红利质量全收益指数",
+      "status": "active",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": true,
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/931468factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证国新央企股东回报指数",
+      "provider": "csindex",
+      "price_code": "932039",
+      "total_return_code": "932039CNY01",
+      "total_return_name": "中证国新央企股东回报全收益指数",
+      "status": "observation_only_insufficient_pe_history",
+      "history_identity_status": "passed_but_insufficient_pe_history",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": false,
+      "valid_pe_rows": 899,
+      "valid_pe_start": "2022-11-02",
+      "valid_pe_end": "2026-07-17",
+      "review_note": "Price and total-return identities passed, but valid PE history has only 899 sessions versus the 1000-session activation floor.",
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/932039factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证诚通央企红利指数",
+      "provider": "csindex",
+      "price_code": "931132",
+      "total_return_code": "931132CNY01",
+      "total_return_name": "中证诚通央企红利全收益指数",
+      "status": "observation_only_insufficient_pe_history",
+      "history_identity_status": "passed_but_insufficient_pe_history",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": false,
+      "valid_pe_rows": 790,
+      "valid_pe_start": "2023-04-13",
+      "valid_pe_end": "2026-07-17",
+      "review_note": "Price and total-return identities passed, but valid PE history has only 790 sessions versus the 1000-session activation floor.",
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/931132factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证智选高股息策略指数",
+      "provider": "csindex",
+      "price_code": "932305",
+      "total_return_code": "932305CNY010",
+      "total_return_name": "中证智选高股息策略全收益指数",
+      "status": "observation_only_insufficient_pe_history",
+      "history_identity_status": "passed_but_insufficient_pe_history",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": false,
+      "valid_pe_rows": 440,
+      "valid_pe_start": "2024-09-20",
+      "valid_pe_end": "2026-07-17",
+      "review_note": "Price and total-return identities passed, but valid PE history has only 440 sessions versus the 1000-session activation floor.",
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/932305factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证全指红利质量指数",
+      "provider": "csindex",
+      "price_code": "932315",
+      "total_return_code": "932315CNY010",
+      "total_return_name": "中证全指红利质量全收益指数",
+      "status": "observation_only_insufficient_pe_history",
+      "history_identity_status": "passed_but_insufficient_pe_history",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": false,
+      "valid_pe_rows": 498,
+      "valid_pe_start": "2024-06-28",
+      "valid_pe_end": "2026-07-17",
+      "review_note": "Price and total-return identities passed, but valid PE history has only 498 sessions versus the 1000-session activation floor.",
+      "observed_etf_count": 2,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/932315factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证A500红利低波动指数",
+      "provider": "csindex",
+      "price_code": "932422",
+      "total_return_code": "932422CNY010",
+      "total_return_name": "中证A500红利低波动全收益指数",
+      "status": "observation_only_insufficient_pe_history",
+      "history_identity_status": "passed_but_insufficient_pe_history",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": false,
+      "valid_pe_rows": 315,
+      "valid_pe_start": "2025-04-01",
+      "valid_pe_end": "2026-07-17",
+      "review_note": "Price and total-return identities passed, but valid PE history has only 315 sessions versus the 1000-session activation floor.",
+      "observed_etf_count": 2,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/932422factsheet.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "上证国有企业红利指数",
+      "provider": "csindex",
+      "price_code": "000151",
+      "total_return_code": "H00151",
+      "total_return_name": "上证国有企业红利全收益指数",
+      "status": "active",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": true,
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000151factsheet.pdf",
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000151_Index_Methodology_cn.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "中证红利价值指数",
+      "provider": "csindex",
+      "price_code": "H30270",
+      "total_return_code": "H20270",
+      "total_return_name": "中证红利价值全收益指数",
+      "status": "active",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "passed",
+      "local_cache_ready": true,
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/H30270factsheet.pdf",
+        "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/1013_H30270_Index_Methodology_cn.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "深证红利指数",
+      "provider": "cni",
+      "price_code": "399324",
+      "total_return_code": "CN2324",
+      "total_return_name": "深证红利R",
+      "status": "observation_only_missing_historical_valuation",
+      "history_identity_status": "passed",
+      "valuation_identity_status": "missing_historical_series",
+      "local_cache_ready": false,
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://www.cnindex.com.cn/html2pdf/preview/jj_399324.pdf",
+        "https://www.cnindex.com.cn/docs/gz_399324.pdf"
+      ]
+    },
+    {
+      "tracking_index_name": "标普中国A股大盘红利低波50指数",
+      "provider": "spglobal",
+      "price_code": "",
+      "total_return_code": "",
+      "total_return_name": "",
+      "status": "unresolved_external_provider",
+      "history_identity_status": "unresolved",
+      "valuation_identity_status": "unresolved",
+      "local_cache_ready": false,
+      "observed_etf_count": 1,
+      "evidence_urls": []
+    },
+    {
+      "tracking_index_name": "中信标普中国A股红利机会指数",
+      "provider": "spglobal",
+      "price_code": "",
+      "total_return_code": "",
+      "total_return_name": "",
+      "status": "unresolved_external_provider",
+      "history_identity_status": "unresolved",
+      "valuation_identity_status": "unresolved",
+      "local_cache_ready": false,
+      "observed_etf_count": 1,
+      "evidence_urls": [
+        "https://www.spglobal.com/spdji/zh/documents/index-news-and-announcements-lls/20141127-china-a-share-div-opp-change-chinese.pdf"
+      ]
+    }
+  ]
+}

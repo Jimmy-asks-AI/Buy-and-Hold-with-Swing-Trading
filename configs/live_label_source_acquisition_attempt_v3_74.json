@@ -1,0 +1,45 @@
+{
+  "task_id": "20260529_v3_74_live_label_source_acquisition_attempt",
+  "v3_73_manifest_path": "outputs/agent_runs/v3_73/higher_quality_label_source_review/agent_run_manifest.json",
+  "v3_73_queue_path": "outputs/agent_runs/v3_73/higher_quality_label_source_review/strict_survivor_label_review_queue.csv",
+  "v3_73_source_contract_path": "outputs/agent_runs/v3_73/higher_quality_label_source_review/required_total_return_source_contract.csv",
+  "signal_panel_path": "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_74/live_label_source_acquisition_attempt",
+  "catalog_path": "data_catalog/a_share_live_label_source_acquisition_attempt_v3_74.md",
+  "target_security": "000985.XSHG",
+  "target_asset_or_index": "MARKET",
+  "start_date": "2000-01-01",
+  "end_date": "2026-05-29",
+  "fields": [
+    "close"
+  ],
+  "fq": "pre",
+  "execute_probe": true,
+  "allow_target_write": false,
+  "approved_source_basis": "none",
+  "min_source_rows": 1000,
+  "min_signal_coverage_ratio": 0.8,
+  "horizons": [
+    1,
+    5,
+    20,
+    60
+  ],
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_73/higher_quality_label_source_review/agent_run_manifest.json",
+    "outputs/agent_runs/v3_73/higher_quality_label_source_review/strict_survivor_label_review_queue.csv",
+    "outputs/agent_runs/v3_73/higher_quality_label_source_review/required_total_return_source_contract.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+    "configs/data_credentials.json"
+  ],
+  "forbidden_now": [
+    "print_credentials",
+    "write_target_without_allow_target_write",
+    "treat_joinquant_get_price_as_certified_total_return",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "model_promotion"
+  ]
+}

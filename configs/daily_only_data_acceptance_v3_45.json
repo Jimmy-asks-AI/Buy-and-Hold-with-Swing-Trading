@@ -1,0 +1,49 @@
+{
+  "task_id": "20260529_v3_45_daily_only_data_acceptance",
+  "data_root": "data_raw/tushare_daily_only/v3_38/daily",
+  "registry_path": "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_dataset_registry.csv",
+  "quality_path": "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_quality_report.csv",
+  "guard_manifest_path": "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/agent_run_manifest.json",
+  "manual_queue_path": "outputs/agent_runs/v3_38/daily_only_permission_profile/manual_data_interface_queue.md",
+  "output_dir": "outputs/agent_runs/v3_45/daily_only_data_acceptance",
+  "catalog_path": "data_catalog/a_share_daily_only_data_acceptance_v3_45.md",
+  "start_date": "20000101",
+  "end_date": "20260528",
+  "expected_price_adjustment": "none_raw",
+  "expected_data_source": "tushare.daily",
+  "required_columns": [
+    "ts_code",
+    "trade_date",
+    "open",
+    "high",
+    "low",
+    "close",
+    "pre_close",
+    "change",
+    "pct_chg",
+    "vol",
+    "amount",
+    "asset",
+    "date",
+    "available_date",
+    "data_source",
+    "fetched_at",
+    "price_adjustment"
+  ],
+  "manual_data_interfaces_still_needed": [
+    "adj_factor",
+    "stock_basic",
+    "daily_basic",
+    "index_weight",
+    "index_dailybasic"
+  ],
+  "acceptance_rules": {
+    "missing_business_date_files_must_be_zero": true,
+    "queued_rows_must_be_zero": true,
+    "error_rows_must_be_zero": true,
+    "acquired_quality_issues_must_be_zero": true,
+    "duplicate_asset_date_must_be_zero": true,
+    "raw_adjustment_guard_must_pass": true,
+    "adjusted_return_research_must_remain_blocked": true
+  }
+}

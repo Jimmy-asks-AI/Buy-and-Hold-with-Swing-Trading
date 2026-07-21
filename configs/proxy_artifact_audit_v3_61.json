@@ -1,0 +1,47 @@
+{
+  "task_id": "20260529_v3_61_proxy_artifact_audit",
+  "joined_panel_path": "outputs/agent_runs/v3_60/state_stratified_proxy_validation/joined_proxy_validation_panel.csv",
+  "signal_summary_path": "outputs/agent_runs/v3_60/state_stratified_proxy_validation/signal_proxy_validation_summary.csv",
+  "state_summary_path": "outputs/agent_runs/v3_60/state_stratified_proxy_validation/state_stratified_proxy_validation.csv",
+  "negative_control_path": "outputs/agent_runs/v3_60/state_stratified_proxy_validation/negative_control_summary.csv",
+  "market_proxy_source_path": "data_raw/market_labels/market_price_index_proxy_000985.csv",
+  "v3_60_manifest_path": "outputs/agent_runs/v3_60/state_stratified_proxy_validation/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_61/proxy_artifact_audit",
+  "catalog_path": "data_catalog/a_share_proxy_artifact_audit_v3_61.md",
+  "horizons": [1, 5, 20, 60],
+  "candidate_selection": {
+    "positive_status": "proxy_positive_observation"
+  },
+  "audit_thresholds": {
+    "min_abs_proxy_spearman": 0.03,
+    "min_control_degradation": 0.015,
+    "max_same_day_corr_ratio": 0.75,
+    "max_future_lead_corr_excess": 0.015,
+    "min_primary_state_support": 6,
+    "max_bull_state_share": 0.85
+  },
+  "market_regime": {
+    "trend_window": 252,
+    "bull_return_threshold": 0.15,
+    "bear_return_threshold": -0.15
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/joined_proxy_validation_panel.csv",
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/signal_proxy_validation_summary.csv",
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/state_stratified_proxy_validation.csv",
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/negative_control_summary.csv",
+    "outputs/agent_runs/v3_60/state_stratified_proxy_validation/agent_run_manifest.json",
+    "data_raw/market_labels/market_price_index_proxy_000985.csv"
+  ],
+  "forbidden_now": [
+    "write_official_market_total_return_source",
+    "write_official_total_return_labels",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "model_promotion",
+    "default_enablement",
+    "claim_total_return_performance"
+  ]
+}

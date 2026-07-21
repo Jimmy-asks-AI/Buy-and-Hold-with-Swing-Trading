@@ -1,0 +1,31 @@
+{
+  "task_id": "20260529_v3_76_market_label_source_intake_orchestrator",
+  "v3_75_manifest_path": "outputs/agent_runs/v3_75/label_source_procurement_pack/agent_run_manifest.json",
+  "v3_75_import_decision_path": "outputs/agent_runs/v3_75/label_source_procurement_pack/import_decision.csv",
+  "v3_75_procurement_requirements_path": "outputs/agent_runs/v3_75/label_source_procurement_pack/procurement_requirements.csv",
+  "v3_75_vendor_template_path": "outputs/agent_runs/v3_75/label_source_procurement_pack/market_total_return_index.vendor_template.csv",
+  "v3_53_config_path": "configs/market_total_return_label_importer_v3_53.json",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_76/market_label_source_intake_orchestrator",
+  "catalog_path": "data_catalog/a_share_market_label_source_intake_orchestrator_v3_76.md",
+  "execute_downstream": false,
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/agent_run_manifest.json",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/import_decision.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/procurement_requirements.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/market_total_return_index.vendor_template.csv",
+    "configs/market_total_return_label_importer_v3_53.json",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "forbidden_now": [
+    "write_official_target_source",
+    "run_v3_53",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion"
+  ]
+}

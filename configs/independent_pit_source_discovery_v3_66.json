@@ -1,0 +1,35 @@
+{
+  "task_id": "20260529_v3_66_independent_pit_source_discovery",
+  "v3_65_manifest_path": "outputs/agent_runs/v3_65/walk_forward_failure_attribution/agent_run_manifest.json",
+  "v3_65_decision_path": "outputs/agent_runs/v3_65/walk_forward_failure_attribution/retire_repair_decisions.csv",
+  "output_dir": "outputs/agent_runs/v3_66/independent_pit_source_discovery",
+  "catalog_path": "data_catalog/a_share_independent_pit_source_discovery_v3_66.md",
+  "queue_thresholds": {
+    "min_ready_priority_score": 80,
+    "max_feature_layer_queue_rows": 5
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/agent_run_manifest.json",
+    "outputs/agent_runs/v3_65/walk_forward_failure_attribution/retire_repair_decisions.csv",
+    "data_raw/index/akshare_sw_industry/daily_sw/",
+    "data_raw/index/akshare_csindex/daily_csindex/",
+    "data_raw/index/akshare_csindex/valuation_pe_lg/",
+    "data_raw/index/akshare_csindex/valuation_pb_lg/",
+    "data_raw/macro/macro_pit_panel.csv",
+    "data_raw/tushare_daily_only/v3_38/daily/",
+    "data_raw/akshare/daily_qfq/",
+    "data_raw/akshare/financial_indicator/"
+  ],
+  "forbidden_now": [
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "write_annualized_return",
+    "write_portfolio_return",
+    "model_promotion",
+    "default_enablement",
+    "same_branch_threshold_tuning",
+    "stock_return_label_from_unadjusted_raw_prices"
+  ]
+}

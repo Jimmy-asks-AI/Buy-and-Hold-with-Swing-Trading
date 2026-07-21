@@ -1,0 +1,85 @@
+{
+  "task_id": "20260529_v3_67_market_participation_breadth_features",
+  "parent_id": "20260529_v3_66_independent_pit_source_discovery",
+  "version": "V3.67",
+  "assigned_agent": "data_steward",
+  "status": "ready",
+  "objective": "Build a market participation breadth feature layer from the accepted Tushare daily-only raw OHLCV lineage, with an explicit raw-adjustment guard and no stock-return labels.",
+  "baseline": {
+    "version": "V3.66",
+    "script": "strategy_lab/hirssm_v3_66_independent_pit_source_discovery.py",
+    "output_dir": "outputs/agent_runs/v3_66/independent_pit_source_discovery",
+    "metrics_to_compare": [
+      "feature_ready_source_rows",
+      "eligible_feature_layer_blueprint_rows",
+      "next_validation_queue_rows"
+    ]
+  },
+  "allowed_inputs": [
+    "configs/market_participation_breadth_v3_67.json",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/agent_run_manifest.json",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/next_validation_queue.csv",
+    "outputs/agent_runs/v3_66/independent_pit_source_discovery/source_inventory.csv",
+    "outputs/agent_runs/v3_44/raw_daily_adjustment_guard/research_capability_matrix.csv",
+    "outputs/agent_runs/v3_47/daily_only_feature_layer/daily_market_feature_panel.csv",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+    "data_raw/tushare_daily_only/v3_38/daily/"
+  ],
+  "allowed_writes": [
+    "strategy_lab/market_participation_breadth_features.py",
+    "strategy_lab/hirssm_v3_67_market_participation_breadth_features.py",
+    "configs/market_participation_breadth_v3_67.json",
+    "strategy_lab/agents/task_briefs/20260529_v3_67_market_participation_breadth_features.json",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/",
+    "data_catalog/a_share_market_participation_breadth_features_v3_67.md",
+    "reports/AGENT_TASK_BOARD.md"
+  ],
+  "dependencies": [
+    "20260529_v3_66_independent_pit_source_discovery",
+    "20260529_v3_44_raw_daily_adjustment_guard",
+    "20260529_v3_47_daily_only_feature_layer",
+    "20260529_v3_48_daily_only_state_monitor"
+  ],
+  "required_outputs": [
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/input_checks.csv",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/market_participation_breadth_feature_panel.csv",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/raw_adjustment_guard_checks.csv",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/feature_dictionary.csv",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/feature_contract.md",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/feature_quality_checks.csv",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/no_promotion_guard.csv",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/market_participation_breadth_feature_report.md",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/agent_run_manifest.json",
+    "data_catalog/a_share_market_participation_breadth_features_v3_67.md"
+  ],
+  "forbidden": [
+    "Do not run a portfolio backtest.",
+    "Do not generate NAV, Sharpe, drawdown, annualized return, or portfolio-return outputs.",
+    "Do not create stock-return labels from raw unadjusted Tushare daily prices.",
+    "Do not create adjusted-return or total-return fields.",
+    "Do not promote market participation breadth features into the default model.",
+    "Do not tune V3.64/V3.65 same-branch MARKET proxy thresholds."
+  ],
+  "acceptance_criteria": [
+    "V3.66 queue must contain the V3.67 Tushare daily-only breadth feature task.",
+    "V3.44 raw daily guard must allow market breadth use with raw-boundary and hard-block adjusted/total-return uses.",
+    "Feature panel must have at least 6000 dates and the latest asset count must be at least 4000.",
+    "All feature rows must be after-close for next-trade-date use.",
+    "Raw adjustment guard and feature quality checks must pass.",
+    "No output CSV column contains forbidden performance or promotion terms."
+  ],
+  "failure_conditions": [
+    "Any output creates stock-level return labels from raw prices.",
+    "Any output allows portfolio harness or model promotion.",
+    "Any adjusted-return, total-return, NAV, Sharpe, drawdown, or portfolio-return output is produced.",
+    "Any credential appears outside configs/data_credentials.json."
+  ],
+  "quality_gates": [
+    "AST and JSON checks pass.",
+    "Runner self_check.csv passes.",
+    "agent_run_manifest.json satisfies the manifest required field schema.",
+    "Forbidden performance or promotion column scan returns zero hits.",
+    "Secret leak scan returns zero paths."
+  ],
+  "next_handoff": "factor_researcher should start V3.68 industry breadth and dispersion feature-layer construction from SW industry daily index data."
+}

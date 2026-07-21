@@ -1,0 +1,27 @@
+{
+  "task_id": "20260529_v3_51_adjusted_pit_label_layer",
+  "signal_panel_path": "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+  "candidate_signal_manifest_path": "outputs/agent_runs/v3_50/candidate_signal_registry/agent_run_manifest.json",
+  "label_contract_path": "outputs/agent_runs/v3_49/state_stratified_validation_framework/adjusted_pit_label_contract.csv",
+  "manual_queue_path": "outputs/agent_runs/v3_38/daily_only_permission_profile/manual_data_interface_queue.md",
+  "existing_adjusted_pit_label_path": null,
+  "output_dir": "outputs/agent_runs/v3_51/adjusted_pit_label_layer",
+  "catalog_path": "data_catalog/a_share_adjusted_pit_label_layer_v3_51.md",
+  "horizons": [
+    1,
+    5,
+    20,
+    60
+  ],
+  "signal_asset_values": [
+    "MARKET"
+  ],
+  "min_required_signal_rows": 60000,
+  "forbidden_now": [
+    "raw_close_forward_return",
+    "unadjusted_return_label",
+    "performance_validation",
+    "portfolio_backtest",
+    "model_promotion"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "task_id": "20260529_v3_49_state_stratified_validation_framework",
+  "state_panel_path": "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+  "state_monitor_manifest_path": "outputs/agent_runs/v3_48/daily_only_state_monitor/agent_run_manifest.json",
+  "signal_panel_path": null,
+  "adjusted_pit_label_path": null,
+  "output_dir": "outputs/agent_runs/v3_49/state_stratified_validation_framework",
+  "catalog_path": "data_catalog/a_share_state_stratified_validation_framework_v3_49.md",
+  "state_columns": [
+    "composite_state",
+    "liquidity_state",
+    "breadth_state",
+    "activity_state",
+    "concentration_state",
+    "limit_crowding_state",
+    "data_quality_state"
+  ],
+  "horizons": [
+    1,
+    5,
+    20,
+    60
+  ],
+  "min_state_observations": 120,
+  "min_unique_states": 6,
+  "required_return_basis": [
+    "adjusted_return",
+    "total_return"
+  ],
+  "purge_days": 20,
+  "embargo_days": 5,
+  "forbidden_now": [
+    "performance_claim",
+    "portfolio_backtest",
+    "model_promotion",
+    "unadjusted_return_label"
+  ]
+}

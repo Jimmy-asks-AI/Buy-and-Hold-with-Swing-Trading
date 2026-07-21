@@ -1,0 +1,51 @@
+{
+  "task_id": "20260601_v3_78_market_label_sample_intake_validator",
+  "v3_77_manifest_path": "outputs/agent_runs/v3_77/market_label_source_discovery/agent_run_manifest.json",
+  "v3_77_source_candidates_path": "outputs/agent_runs/v3_77/market_label_source_discovery/source_candidates.csv",
+  "v3_75_source_contract_path": "outputs/agent_runs/v3_75/label_source_procurement_pack/import_source_contract.csv",
+  "incoming_sample_dir": "data_raw/market_labels/incoming_samples",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_78/market_label_sample_intake_validator",
+  "catalog_path": "data_catalog/a_share_market_label_sample_intake_validator_v3_78.md",
+  "min_sample_rows": 20,
+  "max_available_lag_days": 10,
+  "max_abs_daily_change": 0.15,
+  "allowed_asset_values": [
+    "MARKET",
+    "000985",
+    "000985.CSI",
+    "CSI_ALL_SHARE",
+    "CSI_ALL_SHARE_TOTAL_RETURN"
+  ],
+  "approved_source_decisions": [
+    "primary_procurement_route",
+    "secondary_procurement_route"
+  ],
+  "approved_source_tokens": [
+    "csindex_official_total_return_service",
+    "wind_choice_ifind_total_return_index",
+    "China Securities Index",
+    "CSI",
+    "Wind",
+    "Choice",
+    "iFinD"
+  ],
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_77/market_label_source_discovery/agent_run_manifest.json",
+    "outputs/agent_runs/v3_77/market_label_source_discovery/source_candidates.csv",
+    "outputs/agent_runs/v3_75/label_source_procurement_pack/import_source_contract.csv",
+    "data_raw/market_labels/incoming_samples/*.csv",
+    "data_raw/market_labels/market_total_return_index.csv"
+  ],
+  "forbidden_now": [
+    "write_official_target_source",
+    "run_v3_53",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_drawdown",
+    "model_promotion"
+  ]
+}

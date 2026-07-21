@@ -1,0 +1,63 @@
+{
+  "task_id": "20260529_v3_63_lag_safe_proxy_validation",
+  "repaired_signal_panel_path": "outputs/agent_runs/v3_62/lag_safe_signal_repair/repaired_signal_panel.csv",
+  "price_proxy_label_path": "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+  "market_proxy_source_path": "data_raw/market_labels/market_price_index_proxy_000985.csv",
+  "v3_62_manifest_path": "outputs/agent_runs/v3_62/lag_safe_signal_repair/agent_run_manifest.json",
+  "v3_59_manifest_path": "outputs/agent_runs/v3_59/market_price_proxy_label_importer/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_63/lag_safe_proxy_validation",
+  "catalog_path": "data_catalog/a_share_lag_safe_proxy_validation_v3_63.md",
+  "horizons": [1, 5, 20, 60],
+  "state_columns": [
+    "composite_state",
+    "liquidity_state",
+    "breadth_state",
+    "activity_state",
+    "concentration_state",
+    "limit_crowding_state"
+  ],
+  "minimums": {
+    "joined_rows": 120000,
+    "signal_observations": 4500,
+    "state_observations": 200
+  },
+  "validation": {
+    "top_quantile": 0.8,
+    "bottom_quantile": 0.2,
+    "min_abs_proxy_spearman": 0.03,
+    "min_proxy_qspread": 0.0,
+    "min_top_directional_alignment": 0.52
+  },
+  "artifact_screen": {
+    "negative_control_shift": 252,
+    "min_control_degradation": 0.015,
+    "max_abs_same_day_corr": 0.10,
+    "max_same_day_corr_ratio": 1.0,
+    "max_future_lead_corr_excess": 0.015,
+    "min_primary_state_support": 6,
+    "max_bull_state_share": 0.85
+  },
+  "market_regime": {
+    "trend_window": 252,
+    "bull_return_threshold": 0.15,
+    "bear_return_threshold": -0.15
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_62/lag_safe_signal_repair/repaired_signal_panel.csv",
+    "data_raw/market_labels/market_price_proxy_forward_labels_000985.csv",
+    "data_raw/market_labels/market_price_index_proxy_000985.csv",
+    "outputs/agent_runs/v3_62/lag_safe_signal_repair/agent_run_manifest.json",
+    "outputs/agent_runs/v3_59/market_price_proxy_label_importer/agent_run_manifest.json"
+  ],
+  "forbidden_now": [
+    "write_official_market_total_return_source",
+    "write_official_total_return_labels",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "model_promotion",
+    "default_enablement",
+    "claim_total_return_performance"
+  ]
+}

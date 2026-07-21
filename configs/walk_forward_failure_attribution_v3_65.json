@@ -1,0 +1,44 @@
+{
+  "task_id": "20260529_v3_65_walk_forward_failure_attribution",
+  "window_results_path": "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/walk_forward_window_results.csv",
+  "survivor_panel_path": "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/survivor_joined_proxy_panel.csv",
+  "oos_summary_path": "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/walk_forward_oos_summary.csv",
+  "v3_64_manifest_path": "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/agent_run_manifest.json",
+  "output_dir": "outputs/agent_runs/v3_65/walk_forward_failure_attribution",
+  "catalog_path": "data_catalog/a_share_walk_forward_failure_attribution_v3_65.md",
+  "classification_thresholds": {
+    "broad_failure_pass_rate": 0.1,
+    "strong_proxy_pass_rate": 0.5,
+    "long_horizons": [20, 60],
+    "retire_long_horizon_median_spearman": -0.05
+  },
+  "state_attribution": {
+    "min_state_rows": 240,
+    "state_min_spearman": 0.03,
+    "state_min_qspread": 0.0,
+    "state_min_top_alignment": 0.52,
+    "max_broad_failure_row_share_for_state_retest": 0.55,
+    "min_strong_proxy_row_share_for_state_retest": 0.1
+  },
+  "bucket_attribution": {
+    "top_quantile": 0.8,
+    "bottom_quantile": 0.2
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/walk_forward_window_results.csv",
+    "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/survivor_joined_proxy_panel.csv",
+    "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/walk_forward_oos_summary.csv",
+    "outputs/agent_runs/v3_64/narrow_walk_forward_proxy_review/agent_run_manifest.json"
+  ],
+  "forbidden_now": [
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "write_annualized_return",
+    "write_portfolio_return",
+    "model_promotion",
+    "default_enablement",
+    "claim_investable_performance"
+  ]
+}

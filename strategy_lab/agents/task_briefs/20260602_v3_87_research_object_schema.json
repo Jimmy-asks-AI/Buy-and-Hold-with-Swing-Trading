@@ -1,0 +1,23 @@
+{
+  "task_id": "20260602_v3_87_research_object_schema",
+  "parent_id": "20260602_v3_86_quant_research_assistant_architecture",
+  "version": "V3.87",
+  "assigned_agent": "data_steward",
+  "status": "accepted",
+  "objective": "Create a unified research object schema and source coverage map for indexes and industry indexes.",
+  "baseline": {
+    "version": "V3.86",
+    "script": "strategy_lab/hirssm_v3_86_to_v3_92_quant_research_assistant.py",
+    "output_dir": "outputs/agent_runs/v3_86/quant_research_assistant_architecture/",
+    "metrics_to_compare": ["role_matrix_nonempty"]
+  },
+  "allowed_inputs": ["configs/quant_research_assistant_v3_86_to_v3_92.json", "data_raw/index/", "data_raw/macro/macro_pit_panel.csv"],
+  "allowed_writes": ["outputs/agent_runs/v3_87/research_object_schema/"],
+  "dependencies": ["20260602_v3_86_quant_research_assistant_architecture"],
+  "required_outputs": ["research_object_schema.csv", "sample_research_universe.csv", "data_source_coverage.csv", "research_object_contract_check.csv", "agent_run_manifest.json"],
+  "forbidden": ["Do not backfill current snapshots into historical records.", "Do not read unrelated agent scratch context."],
+  "acceptance_criteria": ["Schema includes identity, type, horizon, as-of date, confidence, and invalidation fields.", "Sample universe matches every required schema field.", "All configured sample objects have usable price coverage.", "Coverage matrix records downstream allowed/research-only status."],
+  "failure_conditions": ["Configured price file missing.", "Macro PIT panel missing when macro coverage is claimed.", "Required schema field missing from sample universe.", "Current snapshot source allowed for historical backtest."],
+  "quality_gates": ["CSV files parse.", "Coverage matrix records PIT policy.", "Contract check has no fail rows.", "Manifest paths exist."],
+  "next_handoff": "technical_market_analyst"
+}

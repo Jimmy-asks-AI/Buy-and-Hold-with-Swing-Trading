@@ -1,0 +1,25 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "variant",
+      "role",
+      "description",
+      "multipliers_json",
+      "selection_source",
+      "diagnostic_full_sample_only",
+      "eligible_for_default_promotion"
+    ],
+    "properties": {
+      "variant": { "type": "string" },
+      "role": { "enum": ["control", "candidate", "observation", "rejected"] },
+      "description": { "type": "string" },
+      "multipliers_json": { "type": "string" },
+      "disabled_experts": { "type": "string" },
+      "selection_source": { "type": "string" },
+      "diagnostic_full_sample_only": { "type": "boolean" },
+      "eligible_for_default_promotion": { "type": "boolean" }
+    }
+  }
+}

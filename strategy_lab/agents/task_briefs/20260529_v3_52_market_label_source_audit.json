@@ -1,0 +1,39 @@
+{
+  "task_id": "20260529_v3_52_market_label_source_audit",
+  "version": "V3.52",
+  "role": "market_label_source_auditor",
+  "objective": "Audit local files for an acceptable MARKET-level PIT total-return label source before V3.49/V3.50 performance validation can run.",
+  "fixed_inputs": [
+    "configs/market_label_source_audit_v3_52.json",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/label_source_requirements.csv",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+    "data_raw/index/akshare_csindex/daily_csindex/*.csv",
+    "outputs/hirssm_v3_10_clean_baseline/nav_*.csv"
+  ],
+  "outputs": [
+    "strategy_lab/market_label_source_audit.py",
+    "strategy_lab/hirssm_v3_52_market_label_source_audit.py",
+    "outputs/agent_runs/v3_52/market_label_source_audit/local_market_source_inventory.csv",
+    "outputs/agent_runs/v3_52/market_label_source_audit/market_label_candidate_assessment.csv",
+    "outputs/agent_runs/v3_52/market_label_source_audit/market_label_source_requirements.csv",
+    "outputs/agent_runs/v3_52/market_label_source_audit/market_label_acquisition_plan.csv",
+    "outputs/agent_runs/v3_52/market_label_source_audit/market_label_readiness_checks.csv",
+    "outputs/agent_runs/v3_52/market_label_source_audit/no_label_guard.csv",
+    "outputs/agent_runs/v3_52/market_label_source_audit/market_label_source_report.md",
+    "data_catalog/a_share_market_label_source_audit_v3_52.md"
+  ],
+  "forbidden": [
+    "Do not accept strategy NAV, benchmark NAV, or any backtest-derived output as a label source.",
+    "Do not accept CSIndex or SW price-only close series as total-return labels.",
+    "Do not compute forward returns, IC, hit rate, or backtest metrics.",
+    "Do not call network APIs.",
+    "Do not print or write secrets."
+  ],
+  "acceptance": [
+    "Every local candidate must have a decision and reason.",
+    "Accepted candidates must include date, market identifier, total-return or explicitly adjusted value, available_date, data_source, and source_vintage.",
+    "If no accepted source exists, performance validation must remain blocked.",
+    "The acquisition plan must define the minimum dataset needed to unblock MARKET labels.",
+    "No labels or performance outputs may be produced in this version."
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "task_id": "20260529_v3_52_market_label_source_audit",
+  "output_dir": "outputs/agent_runs/v3_52/market_label_source_audit",
+  "catalog_path": "data_catalog/a_share_market_label_source_audit_v3_52.md",
+  "market_proxy_codes": [
+    "MARKET",
+    "000985",
+    "000985.SH",
+    "000300",
+    "000300.SH",
+    "000905",
+    "000905.SH",
+    "000016",
+    "000016.SH"
+  ],
+  "candidate_file_globs": [
+    "data_raw/index/akshare_csindex/daily_csindex/*.csv",
+    "data_raw/index/akshare_sw_industry/daily_sw/*.csv",
+    "data_raw/index/akshare_csindex/valuation_latest_csindex/*.csv",
+    "data_raw/index/akshare_csindex/valuation_pe_lg/*.csv",
+    "data_raw/index/akshare_csindex/valuation_pb_lg/*.csv",
+    "data_raw/macro/*.csv",
+    "data_raw/macro/raw_akshare/*.csv",
+    "outputs/hirssm_v3_10_clean_baseline/nav_*.csv",
+    "outputs/hirssm_v3_0_v3_1_benchmark_core/v3_0/benchmark_relative_score_*.csv",
+    "outputs/hirssm_v3_0_v3_1_benchmark_core/v3_1/benchmark_relative_score_*.csv",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/*.csv"
+  ],
+  "forbidden_now": [
+    "use_backtest_nav_as_label",
+    "use_benchmark_output_as_label",
+    "use_price_only_index_close_as_total_return",
+    "generate_forward_labels_without_accepted_source",
+    "performance_validation",
+    "portfolio_backtest",
+    "model_promotion"
+  ]
+}

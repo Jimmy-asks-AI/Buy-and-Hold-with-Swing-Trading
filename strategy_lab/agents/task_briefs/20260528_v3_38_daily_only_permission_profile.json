@@ -1,0 +1,39 @@
+{
+  "task_id": "20260528_v3_38_daily_only_permission_profile",
+  "version": "V3.38",
+  "agent": "data_steward",
+  "objective": "Continue data acquisition under the current Tushare permission profile where only stock raw daily bars are reliably available.",
+  "fixed_inputs": [
+    "configs/data_credentials.json",
+    "configs/daily_only_permission_v3_38.json",
+    "configs/daily_only_permission_v3_38_execute.example.json",
+    "strategy_lab/hirssm_v3_36_pit_data_pilot_readiness.py"
+  ],
+  "outputs": [
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/credential_readiness.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/permission_profile.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/blocked_endpoint_registry.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_harvest_plan.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_harvest_log.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_dataset_registry.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/daily_quality_report.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/agent_report.md",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/self_check.csv",
+    "data_catalog/a_share_daily_only_permission_v3_38.md",
+    "data_raw/tushare_daily_only/v3_38/daily/trade_date=YYYYMMDD.csv"
+  ],
+  "forbidden_actions": [
+    "Do not call endpoints that are known to be permission-blocked.",
+    "Do not infer adjusted returns without adj_factor.",
+    "Do not infer valuation or market-cap factors without daily_basic.",
+    "Do not treat current stock_basic snapshots as historical PIT universe.",
+    "Do not run factor validation or portfolio backtests in this task."
+  ],
+  "acceptance": [
+    "Only Tushare daily endpoint is called when execution is enabled.",
+    "Blocked endpoints are recorded as permission_blocked instead of retried.",
+    "Raw daily files are written by trade_date and can be resumed without re-calling cached dates.",
+    "Quality report checks duplicate asset-date rows and essential OHLCV fields.",
+    "Reports clearly state that data is raw-price only and not sufficient for adjusted-return, valuation, or index-constituent research."
+  ]
+}

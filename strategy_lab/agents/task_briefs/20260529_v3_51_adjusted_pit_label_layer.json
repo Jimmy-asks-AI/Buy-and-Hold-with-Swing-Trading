@@ -1,0 +1,37 @@
+{
+  "task_id": "20260529_v3_51_adjusted_pit_label_layer",
+  "version": "V3.51",
+  "role": "label_layer_engineer",
+  "objective": "Define and gate the adjusted/PIT forward-return label layer required before V3.49/V3.50 can perform real state-stratified signal validation.",
+  "fixed_inputs": [
+    "configs/adjusted_pit_label_layer_v3_51.json",
+    "outputs/agent_runs/v3_50/candidate_signal_registry/signal_panel.csv",
+    "outputs/agent_runs/v3_49/state_stratified_validation_framework/adjusted_pit_label_contract.csv",
+    "outputs/agent_runs/v3_38/daily_only_permission_profile/manual_data_interface_queue.md"
+  ],
+  "outputs": [
+    "strategy_lab/adjusted_pit_label_layer.py",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/label_source_requirements.csv",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/label_build_plan.csv",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/required_label_scopes.csv",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/label_schema_template.csv",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/label_readiness_checks.csv",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/no_label_guard.csv",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/manual_data_request_queue.md",
+    "outputs/agent_runs/v3_51/adjusted_pit_label_layer/label_layer_report.md",
+    "data_catalog/a_share_adjusted_pit_label_layer_v3_51.md"
+  ],
+  "forbidden": [
+    "Do not compute forward returns from raw unadjusted close.",
+    "Do not create fake labels or placeholder returns.",
+    "Do not run signal validation, IC, hit rate, backtest, or model promotion.",
+    "Do not call network APIs."
+  ],
+  "acceptance": [
+    "Required label sources must be explicit.",
+    "Current readiness must block performance validation when adjusted/PIT labels are missing.",
+    "Raw close substitution must be explicitly forbidden.",
+    "Manual data queue must identify what unblocks MARKET and stock-level labels.",
+    "The report must separate label-layer readiness from performance readiness."
+  ]
+}

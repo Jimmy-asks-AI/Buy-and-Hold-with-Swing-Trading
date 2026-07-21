@@ -1,0 +1,70 @@
+{
+  "version": "4.0.0",
+  "context_policy": "Each role receives only its fixed_inputs and prior structured handoff. No role reads the full project history by default.",
+  "promotion_policy": "Only orchestrator may publish a research plan, and it cannot override data, value-trap, risk, or validation vetoes.",
+  "agents": [
+    {
+      "name": "data_steward",
+      "fixed_inputs": ["raw source manifest", "PIT research snapshot", "adjusted or total-return price files"],
+      "outputs": ["data gate", "freshness report", "quarantine list"],
+      "forbidden": ["factor score", "entry signal", "order intent"],
+      "acceptance": ["available_date <= as_of_date", "one latest row per asset", "return basis explicit", "unknown tradeability is blocked"]
+    },
+    {
+      "name": "durable_income_analyst",
+      "fixed_inputs": ["data-approved snapshot", "sector accounting rules"],
+      "outputs": ["quality score", "dividend score", "durable eligibility"],
+      "forbidden": ["technical timing", "portfolio weights", "promotion"],
+      "acceptance": ["five-year profit and dividend continuity", "sector-specific solvency gates", "economic rationale recorded"]
+    },
+    {
+      "name": "valuation_analyst",
+      "fixed_inputs": ["data-approved valuation history", "China 10Y yield", "sector peer snapshot"],
+      "outputs": ["own-history percentile", "sector-relative percentile", "yield spread", "deep-value gate"],
+      "forbidden": ["PE-only recommendation", "price timing", "order intent"],
+      "acceptance": ["absolute and relative valuation both evaluated", "no current snapshot backfilled into history"]
+    },
+    {
+      "name": "value_trap_auditor",
+      "fixed_inputs": ["durability output", "accounting risk fields", "dividend funding fields"],
+      "outputs": ["hard veto", "penalty", "failure reasons"],
+      "forbidden": ["waiving missing data", "timing", "portfolio construction"],
+      "acceptance": ["bank, insurance, utility rules separated", "hard veto is machine readable"]
+    },
+    {
+      "name": "timing_analyst",
+      "fixed_inputs": ["approved candidate", "past-only adjusted OHLC", "current core fraction"],
+      "outputs": ["wait or build stage", "target tranche", "stabilization evidence"],
+      "forbidden": ["buying a falling knife", "same-close execution", "overriding value-trap veto"],
+      "acceptance": ["deep value", "deep drawdown", "stabilization", "next-open execution"]
+    },
+    {
+      "name": "t_execution_analyst",
+      "fixed_inputs": ["established core holding", "range-regime features", "account-specific costs"],
+      "outputs": ["T buy, hold, or sell intent", "cost hurdle", "holding days"],
+      "forbidden": ["selling core as T", "T without core", "same-day stock T backtest"],
+      "acceptance": ["core fraction >= 80%", "edge exceeds round-trip cost plus buffer", "T+1 and minimum holding respected"]
+    },
+    {
+      "name": "portfolio_risk_engineer",
+      "fixed_inputs": ["approved staged entries", "account state", "latest executable prices"],
+      "outputs": ["capped core weights", "T cap", "cash", "indicative lot-rounded intents"],
+      "forbidden": ["leverage", "shorting", "forced full investment", "automatic core sale"],
+      "acceptance": ["stock <= 12%", "ETF <= 25%", "sector <= 30%", "core <= 80%", "cash retained"]
+    },
+    {
+      "name": "validation_auditor",
+      "fixed_inputs": ["PIT historical panel", "total-return or adjusted prices", "target history", "cost scenarios"],
+      "outputs": ["walk-forward evidence", "cost sensitivity", "failure cases", "promotion veto"],
+      "forbidden": ["compounding overlapping labels", "price-proxy promotion", "full-sample-only approval"],
+      "acceptance": ["next-open event backtest", "5/10/20bps scenarios", "untouched test evidence", "no missing OOS periods"]
+    },
+    {
+      "name": "orchestrator",
+      "fixed_inputs": ["all structured agent outputs", "account state", "validation decision"],
+      "outputs": ["cash or research plan", "decision log", "unresolved data requests"],
+      "forbidden": ["overriding veto", "placing broker orders", "claiming expected return without evidence"],
+      "acceptance": ["every decision traceable", "blocked state preserved", "manual confirmation explicitly required"]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "task_id": "20260602_v3_89_fundamental_factor_engine",
+  "parent_id": "20260602_v3_88_technical_signal_engine",
+  "version": "V3.89",
+  "assigned_agent": "fundamental_equity_analyst",
+  "status": "accepted",
+  "objective": "Build a fundamental and valuation research layer with explicit PIT data confidence and repair gaps.",
+  "baseline": {
+    "version": "V3.88",
+    "script": "strategy_lab/hirssm_v3_86_to_v3_92_quant_research_assistant.py",
+    "output_dir": "outputs/agent_runs/v3_88/technical_signal_engine/",
+    "metrics_to_compare": ["object_count", "blocked_count"]
+  },
+  "allowed_inputs": ["data_raw/index/akshare_csindex/valuation_pe_lg/", "data_raw/index/akshare_csindex/valuation_pb_lg/", "data_raw/index/akshare_sw_industry/analysis_latest_sw/", "data_raw/macro/macro_pit_panel.csv"],
+  "allowed_writes": ["outputs/agent_runs/v3_89/fundamental_factor_engine/"],
+  "dependencies": ["20260602_v3_88_technical_signal_engine"],
+  "required_outputs": ["fundamental_signal_latest.csv", "fundamental_data_gap_register.csv", "macro_regime_snapshot.csv", "fundamental_formula_spec.csv", "fundamental_score_reconciliation.csv", "macro_pit_check.csv", "fundamental_method_note.md", "agent_run_manifest.json"],
+  "forbidden": ["Do not use current snapshots as historical backtest features.", "Do not hide missing PIT data."],
+  "acceptance_criteria": ["One fundamental row per object.", "Current snapshot confidence is capped and historical_backtest_allowed is false.", "Latest composite rows are not direct historical backtest features.", "Market valuation components expose valuation_history_backtest_allowed only when historical PE/PB history exists.", "Macro snapshot uses available_date and passes macro_pit_check.csv.", "Fundamental scores recompute from fundamental_formula_spec.csv.", "Partial PE/PB history is recorded in the gap register."],
+  "failure_conditions": ["Missing data gaps when PIT history is absent.", "Fundamental score outside 0 to 1.", "Formula reconciliation fails.", "Current snapshot is allowed into historical backtests.", "Latest research rows are treated as historical backtest features."],
+  "quality_gates": ["CSV files parse.", "Current snapshots are marked.", "Formula/reconciliation files pass.", "Macro PIT checks pass.", "Manifest paths exist."],
+  "next_handoff": "investment_view_synthesizer"
+}

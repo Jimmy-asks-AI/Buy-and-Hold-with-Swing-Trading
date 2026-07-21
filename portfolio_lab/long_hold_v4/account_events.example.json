@@ -1,0 +1,34 @@
+[
+  {
+    "event_id": "DIV-20260718-600000",
+    "event_date": "2026-07-18",
+    "event_type": "cash_dividend",
+    "asset": "600000",
+    "name": "示例银行",
+    "source_ref": "券商交割单编号",
+    "eligible_shares": 5000,
+    "cash_per_share_cny": 0.2,
+    "gross_cash_cny": 1000.0,
+    "tax_cny": 0.0
+  },
+  {
+    "event_id": "TAX-20260818-600000",
+    "event_date": "2026-08-18",
+    "event_type": "dividend_tax",
+    "asset": "600000",
+    "name": "示例银行",
+    "source_ref": "券商交割单编号",
+    "tax_cny": 200.0
+  },
+  {
+    "event_id": "SHARE-20260901-600000",
+    "event_date": "2026-09-01",
+    "event_type": "share_adjustment",
+    "asset": "600000",
+    "name": "示例银行",
+    "source_ref": "公司行为交割单编号",
+    "core_shares_after": 5500,
+    "t_shares_after": 1100,
+    "full_target_shares_reference_after": 6875
+  }
+]

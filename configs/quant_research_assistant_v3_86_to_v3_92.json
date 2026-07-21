@@ -1,0 +1,41 @@
+{
+  "minimum_price_rows": 500,
+  "technical_panel_tail_rows": 260,
+  "research_objects": [
+    {
+      "object_id": "000300",
+      "object_name": "CSI 300",
+      "object_type": "market_index",
+      "sleeve": "large_cap",
+      "primary_horizon": "1m_6m"
+    },
+    {
+      "object_id": "000905",
+      "object_name": "CSI 500",
+      "object_type": "market_index",
+      "sleeve": "mid_cap",
+      "primary_horizon": "1m_6m"
+    },
+    {
+      "object_id": "000985",
+      "object_name": "CSI All Share",
+      "object_type": "market_index",
+      "sleeve": "broad_market",
+      "primary_horizon": "1m_6m"
+    },
+    {
+      "object_id": "801080",
+      "object_name": "SW Electronics",
+      "object_type": "industry_index",
+      "sleeve": "growth_industry",
+      "primary_horizon": "1m_6m"
+    },
+    {
+      "object_id": "801780",
+      "object_name": "SW Banks",
+      "object_type": "industry_index",
+      "sleeve": "defensive_value_industry",
+      "primary_horizon": "1m_6m"
+    }
+  ]
+}

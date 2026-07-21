@@ -1,0 +1,64 @@
+{
+  "task_id": "20260527_v3_35_pit_data_acquisition_contract",
+  "dry_run": true,
+  "start_date": "20000101",
+  "end_date": "20260527",
+  "index_codes": [
+    "000015.SH",
+    "000016.SH",
+    "000300.SH",
+    "000852.SH",
+    "000905.SH",
+    "000906.SH",
+    "000922.SH",
+    "000985.SH"
+  ],
+  "priority_repairs": [
+    "historical_index_constituents_weights",
+    "broad_stock_daily_raw_and_adjusted",
+    "financial_indicator_point_in_time",
+    "historical_industry_classification",
+    "macro_release_calendar_vintage_upgrade"
+  ],
+  "provider_priority": {
+    "historical_index_constituents_weights": [
+      "tushare",
+      "joinquant",
+      "vendor_file"
+    ],
+    "broad_stock_daily_raw_and_adjusted": [
+      "tushare",
+      "joinquant"
+    ],
+    "financial_indicator_point_in_time": [
+      "tushare",
+      "joinquant"
+    ],
+    "historical_industry_classification": [
+      "joinquant",
+      "vendor_file"
+    ],
+    "macro_release_calendar_vintage_upgrade": [
+      "official_release_calendar",
+      "vendor_file"
+    ]
+  },
+  "output_roots": {
+    "tushare": "data_raw/pit/tushare",
+    "joinquant": "data_raw/pit/joinquant",
+    "vendor_file": "data_raw/pit/vendor_file"
+  },
+  "batching": {
+    "stock_daily_yearly_partitions": true,
+    "index_weight_yearly_partitions": false,
+    "pilot_symbol_count": 10,
+    "max_rows_per_file": 1000000
+  },
+  "quality_policy": {
+    "forbid_current_snapshot_backfill": true,
+    "require_available_date_for_time_sensitive_data": true,
+    "require_delisted_stock_coverage": true,
+    "separate_raw_adjusted_prices": true,
+    "first_run_must_be_pilot": true
+  }
+}

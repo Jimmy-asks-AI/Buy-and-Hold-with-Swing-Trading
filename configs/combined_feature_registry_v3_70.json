@@ -1,0 +1,40 @@
+{
+  "task_id": "20260529_v3_70_combined_feature_registry",
+  "v3_67_manifest_path": "outputs/agent_runs/v3_67/market_participation_breadth_features/agent_run_manifest.json",
+  "market_panel_path": "outputs/agent_runs/v3_67/market_participation_breadth_features/market_participation_breadth_feature_panel.csv",
+  "v3_68_manifest_path": "outputs/agent_runs/v3_68/industry_breadth_dispersion_features/agent_run_manifest.json",
+  "industry_panel_path": "outputs/agent_runs/v3_68/industry_breadth_dispersion_features/industry_breadth_dispersion_feature_panel.csv",
+  "v3_69_manifest_path": "outputs/agent_runs/v3_69/macro_growth_liquidity_features/agent_run_manifest.json",
+  "macro_panel_path": "outputs/agent_runs/v3_69/macro_growth_liquidity_features/macro_asof_feature_panel.csv",
+  "output_dir": "outputs/agent_runs/v3_70/combined_feature_registry",
+  "catalog_path": "data_catalog/a_share_combined_feature_registry_v3_70.md",
+  "quality_thresholds": {
+    "min_combined_rows": 6000,
+    "min_full_source_rows": 6000,
+    "min_validation_ready_rows": 4500,
+    "min_feature_registry_rows": 150,
+    "stale_monthly_warn_days": 180,
+    "stale_daily_warn_days": 10
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/agent_run_manifest.json",
+    "outputs/agent_runs/v3_67/market_participation_breadth_features/market_participation_breadth_feature_panel.csv",
+    "outputs/agent_runs/v3_68/industry_breadth_dispersion_features/agent_run_manifest.json",
+    "outputs/agent_runs/v3_68/industry_breadth_dispersion_features/industry_breadth_dispersion_feature_panel.csv",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/agent_run_manifest.json",
+    "outputs/agent_runs/v3_69/macro_growth_liquidity_features/macro_asof_feature_panel.csv"
+  ],
+  "forbidden_now": [
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "write_annualized_return",
+    "write_portfolio_return",
+    "create_return_label",
+    "model_promotion",
+    "default_enablement",
+    "current_component_snapshot_use",
+    "official_total_return_claim"
+  ]
+}

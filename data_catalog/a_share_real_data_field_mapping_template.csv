@@ -1,0 +1,27 @@
+source_table,required,canonical_col,dtype,description,point_in_time_rule,accepted_aliases
+market,yes,date,date,交易日期,交易当日收盘后可得,trade_date|交易日期
+market,yes,asset,string,证券代码,交易当日可得,ts_code|symbol|wind_code|证券代码
+market,yes,adj_close,float,复权收盘价,交易当日收盘后可得,close_adj|复权价|后复权收盘价
+market,yes,amount,float,成交额,交易当日收盘后可得,turnover_value|成交金额|成交额
+market,yes,market_cap,float,总市值或可比市值,交易当日收盘后可得,total_mv|mkt_cap|总市值
+market,no,volume,float,成交量,交易当日收盘后可得,vol|成交量
+market,no,is_tradeable,bool,是否可交易,交易前或交易当日状态可得,tradeable|可交易
+market,no,is_suspended,bool,是否停牌,交易前状态可得,suspend|停牌
+market,no,is_limit_up,bool,是否涨停,交易当日盘中或收盘确认,limit_up|涨停
+market,no,is_limit_down,bool,是否跌停,交易当日盘中或收盘确认,limit_down|跌停
+market,no,is_st,bool,是否 ST,公告生效日起可得,st_flag|ST
+market,no,list_date,date,上市日期,上市时可得,ipo_date|上市日期
+financial,yes,asset,string,证券代码,随财务记录可得,ts_code|symbol|wind_code
+financial,yes,financial_available_at,date,财务字段可得日期,公告日或入库日，不得使用报告期末日,ann_date|publish_date|入库日|公告日
+financial,no,total_equity,float,所有者权益,财报公告日后可得,权益合计
+financial,no,total_assets,float,总资产,财报公告日后可得,资产总计
+financial,no,total_liabilities,float,总负债,财报公告日后可得,负债合计
+financial,no,net_profit_ttm,float,TTM 净利润,基于已公告财报滚动计算,净利润TTM
+financial,no,revenue_ttm,float,TTM 营业收入,基于已公告财报滚动计算,收入TTM
+financial,no,gross_profit_ttm,float,TTM 毛利,基于已公告财报滚动计算,毛利TTM
+financial,no,operating_cashflow_ttm,float,TTM 经营现金流,基于已公告财报滚动计算,经营现金流TTM
+financial,no,free_cashflow_ttm,float,TTM 自由现金流,基于已公告财报滚动计算,自由现金流TTM
+financial,no,cash_dividend_ttm,float,TTM 现金分红,除权公告或分红实施公告后可得,现金分红TTM
+industry,no,asset,string,证券代码,随行业记录可得,ts_code|symbol|wind_code
+industry,no,industry_available_at,date,行业分类可得日期,分类生效日或入库日,industry_date|生效日
+industry,no,industry,string,行业分类,生效日后可得,申万行业|中信行业|industry_name

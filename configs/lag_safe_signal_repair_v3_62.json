@@ -1,0 +1,36 @@
+{
+  "task_id": "20260529_v3_62_lag_safe_signal_repair",
+  "state_panel_path": "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+  "v3_48_manifest_path": "outputs/agent_runs/v3_48/daily_only_state_monitor/agent_run_manifest.json",
+  "v3_61_decision_path": "outputs/agent_runs/v3_61/proxy_artifact_audit/candidate_artifact_decision.csv",
+  "v3_61_manifest_path": "outputs/agent_runs/v3_61/proxy_artifact_audit/agent_run_manifest.json",
+  "market_proxy_source_path": "data_raw/market_labels/market_price_index_proxy_000985.csv",
+  "output_dir": "outputs/agent_runs/v3_62/lag_safe_signal_repair",
+  "catalog_path": "data_catalog/a_share_lag_safe_signal_repair_v3_62.md",
+  "minimums": {
+    "signal_rows": 30000,
+    "repaired_candidates": 6
+  },
+  "artifact_screen": {
+    "max_abs_same_day_market_move_corr_warn": 0.10
+  },
+  "allowed_inputs": [
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/daily_market_state_panel.csv",
+    "outputs/agent_runs/v3_48/daily_only_state_monitor/agent_run_manifest.json",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/candidate_artifact_decision.csv",
+    "outputs/agent_runs/v3_61/proxy_artifact_audit/agent_run_manifest.json",
+    "data_raw/market_labels/market_price_index_proxy_000985.csv"
+  ],
+  "forbidden_now": [
+    "write_official_market_total_return_source",
+    "write_official_total_return_labels",
+    "run_portfolio_backtest",
+    "write_nav",
+    "write_sharpe",
+    "write_max_drawdown",
+    "model_promotion",
+    "default_enablement",
+    "claim_total_return_performance",
+    "use_same_day_formula_inputs_for_same_day_signal"
+  ]
+}

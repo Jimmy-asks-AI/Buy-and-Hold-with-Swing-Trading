@@ -1,0 +1,27 @@
+{
+  "task_id": "20260529_v3_54_market_total_return_source_acquirer",
+  "index_list_path": "data_raw/index/akshare_csindex/index_list/index_csindex_all.csv",
+  "target_source_path": "data_raw/market_labels/market_total_return_index.csv",
+  "output_dir": "outputs/agent_runs/v3_54/market_total_return_source_acquirer",
+  "catalog_path": "data_catalog/a_share_market_total_return_source_acquirer_v3_54.md",
+  "start_date": "20000101",
+  "end_date": "20260529",
+  "preferred_market_asset": "MARKET",
+  "execute": false,
+  "allow_adjusted_proxy": false,
+  "allow_overwrite_target": false,
+  "route_priority": [
+    "existing_contract_csv",
+    "csindex_total_return_code",
+    "joinquant_adjusted_market_proxy",
+    "tushare_index_total_return"
+  ],
+  "forbidden_now": [
+    "promote_price_only_index_close",
+    "promote_strategy_nav_or_benchmark_nav",
+    "run_label_generation",
+    "run_state_validation",
+    "run_portfolio_backtest",
+    "model_promotion"
+  ]
+}
