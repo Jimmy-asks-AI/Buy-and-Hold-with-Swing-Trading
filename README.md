@@ -176,10 +176,14 @@ python -X utf8 -m strategy_lab.long_hold_v4.cli --as-of 2026-07-19
 主要输出位于 `outputs/long_hold_v4/`：
 
 - `pit_gate/readiness.json`：历史数据是否允许进入回测；
-- `current/readiness.json`：当前研究链是否完整；
-- `current/candidate_decisions.csv`：候选标的与阻断原因；
-- `current/order_intents.csv`：纸面订单意向；
-- `current/run_manifest.json`：输入、代码和配置哈希。
+- `runs/<run_id>/`：每次完整运行的不可变产物目录；
+- `current`：仅指向最后一次完整运行的原子 JSON 指针；
+- `runs/<run_id>/candidate_decisions.csv`：候选标的与阻断原因；
+- `runs/<run_id>/target_weights.csv`：该次运行的目标权重快照；
+- `runs/<run_id>/order_intents.csv`：纸面订单意向；
+- `runs/<run_id>/run_manifest.json` 与 `run_manifest_seal.json`：产物清单及独立封印。
+
+运行完整性验证、失败恢复和旧 `current/` 目录迁移说明见 [`data_catalog/long_hold_v4_run_artifact_integrity.md`](data_catalog/long_hold_v4_run_artifact_integrity.md)。
 
 研究入口只生成意向，不修改账户，也不连接券商。成交回执与日终记账由 `execution.py` 和 `accounting.py` 独立处理。
 
