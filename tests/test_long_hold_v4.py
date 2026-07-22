@@ -35,6 +35,7 @@ from strategy_lab.long_hold_v4.stock_snapshot_builder import (
 from strategy_lab.long_hold_v4.pipeline import load_snapshot, plan_orders, run_current
 from strategy_lab.long_hold_v4.execution import normalize_account
 from strategy_lab.long_hold_v4.order_envelope import normalize_order_state_book, verify_order_frame
+from strategy_lab.long_hold_v4.run_artifacts import verify_run
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -600,6 +601,8 @@ class LongHoldV4Tests(unittest.TestCase):
             ).to_csv(root / "prices" / "600000.csv", index=False, encoding="utf-8-sig")
             prepare_runtime_state(root, config)
             paths = run_current(root, config, "2026-07-17")
+            verified_run = verify_run(root, root / "outputs", code_root=ROOT)
+            self.assertEqual(verified_run["run_id"], json.loads(paths["manifest"].read_text(encoding="utf-8"))["run_id"])
             readiness = json.loads(paths["readiness"].read_text(encoding="utf-8"))
             candidate_columns = pd.read_csv(paths["candidates"], encoding="utf-8-sig", nrows=0).columns
             empty_orders = pd.read_csv(paths["orders"], encoding="utf-8-sig")
@@ -751,8 +754,11 @@ class LongHoldV4Tests(unittest.TestCase):
             t_sell = brake_orders[(brake_orders["sleeve"] == "t") & (brake_orders["side"] == "sell")].iloc[0]
             self.assertTrue(bool(t_sell["risk_override_allowed"]))
             verified_orders = verify_order_frame(brake_orders)
-            manifest_sha256 = hashlib.sha256(brake_paths["manifest"].read_bytes()).hexdigest()
-            self.assertEqual(set(verified_orders["run_manifest_sha256"]), {manifest_sha256})
+            manifest = json.loads(brake_paths["manifest"].read_text(encoding="utf-8"))
+            self.assertEqual(
+                set(verified_orders["run_manifest_sha256"]),
+                {manifest["order_binding"]["sha256"]},
+            )
             order_state = normalize_order_state_book(
                 json.loads(brake_paths["order_state"].read_text(encoding="utf-8"))
             )

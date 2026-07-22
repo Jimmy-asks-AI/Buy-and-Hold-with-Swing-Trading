@@ -29,6 +29,7 @@ from .order_envelope import (
     verify_order_frame,
 )
 from .recoverable_transaction import commit_write_set, recover_pending_write_set
+from .run_artifacts import configured_output_root, resolve_current_run, verify_run
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -1027,10 +1028,6 @@ def main() -> None:
     config = load_config(args.config)
     account_path = args.account or ROOT / config["data"]["account_path"]
     order_state_path = args.order_state or ROOT / config["data"]["order_state_path"]
-    orders_path = args.orders or ROOT / config["data"]["output_directory"] / "order_intents.csv"
-    manifest_path = args.manifest or ROOT / config["data"]["output_directory"] / "run_manifest.json"
-    calendar_path = args.calendar or ROOT / config["data"]["trade_calendar_path"]
-    valuation_path = args.valuation_prices or ROOT / config["data"]["output_directory"] / "execution_valuation_prices.csv"
     recover_execution_transaction(account_path, args.ledger, order_state_path)
     if args.initialize_account:
         if not args.initial_as_of:
@@ -1078,6 +1075,25 @@ def main() -> None:
         return
     if not order_state_path.is_file():
         raise ContractError("persistent order state book is missing; run explicit account migration")
+    output_root = configured_output_root(ROOT, config["data"]["output_directory"])
+    if (args.orders is None) != (args.manifest is None):
+        raise ContractError("--orders and --manifest must be supplied together")
+    if args.orders is None:
+        current_run = resolve_current_run(output_root)
+        orders_path = current_run / "order_intents.csv"
+        manifest_path = current_run / "run_manifest.json"
+        selected_output_root = output_root
+        selected_run_id = None
+    else:
+        current_run = args.manifest.parent
+        if current_run.parent.name != "runs" or args.orders != current_run / "order_intents.csv":
+            raise ContractError("explicit orders and manifest must belong to one immutable run directory")
+        orders_path = args.orders
+        manifest_path = args.manifest
+        selected_output_root = current_run.parent.parent
+        selected_run_id = current_run.name
+    calendar_path = args.calendar or ROOT / config["data"]["trade_calendar_path"]
+    valuation_path = args.valuation_prices or current_run / "execution_valuation_prices.csv"
     for required_path, label in [
         (orders_path, "approved order source"),
         (manifest_path, "run manifest"),
@@ -1089,9 +1105,10 @@ def main() -> None:
     fills = pd.read_csv(args.fills, encoding="utf-8-sig", dtype={"fill_id": str, "order_id": str, "asset": str})
     orders = pd.read_csv(orders_path, encoding="utf-8-sig", dtype={"order_id": str, "asset": str})
     order_state = json.loads(order_state_path.read_text(encoding="utf-8"))
-    manifest_bytes = manifest_path.read_bytes()
-    manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
-    manifest = json.loads(manifest_bytes.decode("utf-8"))
+    manifest = verify_run(ROOT, selected_output_root, selected_run_id)
+    manifest_sha256 = str(manifest.get("order_binding", {}).get("sha256", ""))
+    if not re.fullmatch(r"[0-9a-f]{64}", manifest_sha256):
+        raise ContractError("run manifest has no valid order-binding context hash")
     runtime_config_sha256 = config_sha256(config)
     if manifest.get("config_sha256") != runtime_config_sha256 or not str(manifest.get("run_id", "")).strip():
         raise ContractError("run manifest is not bound to the active config and run id")
