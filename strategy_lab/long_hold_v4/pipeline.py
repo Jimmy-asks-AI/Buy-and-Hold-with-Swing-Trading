@@ -30,6 +30,11 @@ from .order_envelope import (
     register_order_envelopes,
     seal_order_envelope,
 )
+from .run_artifacts import (
+    RunArtifactPublisher,
+    canonical_sha256,
+    configured_output_root,
+)
 
 
 EXPECTED_AGENTS = {
@@ -110,7 +115,7 @@ def verify_source_manifest(root: Path, path: Path, as_of: pd.Timestamp) -> list[
     if pd.isna(manifest_date) or pd.Timestamp(manifest_date).normalize() != as_of.normalize():
         failures.append(f"source_manifest_as_of_mismatch={path}")
     root_resolved = root.resolve()
-    entries = payload.get("input_files", []) + payload.get("code_files", [])
+    entries = payload.get("input_files", []) + payload.get("output_files", []) + payload.get("code_files", [])
     if not entries:
         failures.append(f"source_manifest_empty={path}")
         return failures
@@ -499,8 +504,9 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
     run_id = f"LHV4-{as_of_ts:%Y%m%d}-{datetime.now():%Y%m%dT%H%M%S%f}"
     active_config_sha256 = config_sha256(config)
     data_cfg = config["data"]
-    output = root / data_cfg["output_directory"]
-    output.mkdir(parents=True, exist_ok=True)
+    output_root = configured_output_root(root, data_cfg["output_directory"])
+    publisher = RunArtifactPublisher(output_root, run_id)
+    publisher.begin()
     snapshot_path = root / data_cfg["snapshot_path"]
     account_path = root / data_cfg["account_path"]
     order_state_path = root / data_cfg["order_state_path"]
@@ -880,24 +886,38 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
         "investment_boundary": "research_only; no broker connection; manual review required",
     }
 
-    paths = {
-        "readiness": output / "readiness.json",
-        "account": output / "account_summary.json",
-        "candidates": output / "candidate_decisions.csv",
-        "orders": output / "order_intents.csv",
-        "proxies": output / "timing_proxy_latest.csv",
-        "setups": output / "timing_proxy_historical_setups.csv",
-        "agents": output / "agent_decision_log.csv",
-        "manifest": output / "run_manifest.json",
-        "order_state": order_state_path,
-    }
-    write_json(readiness, paths["readiness"])
-    write_json(account_report, paths["account"])
-    scored.to_csv(paths["candidates"], index=False, encoding="utf-8-sig")
-    proxies.to_csv(paths["proxies"], index=False, encoding="utf-8-sig")
-    setups.to_csv(paths["setups"], index=False, encoding="utf-8-sig")
-    agents.to_csv(paths["agents"], index=False, encoding="utf-8-sig")
-    manifest = {
+    target_columns = [
+        "asset",
+        "asset_type",
+        "sector",
+        "entry_action",
+        "target_core_weight",
+        "target_t_weight_cap",
+        "full_target_weight",
+        "target_cash_weight",
+        "t_action",
+        "target_t_fraction",
+        "manual_risk_review_required",
+    ]
+    targets = scored.reindex(columns=target_columns)
+    input_entries = [
+        {
+            "path": str(path.relative_to(root)).replace("\\", "/"),
+            "sha256": file_sha256(path),
+            "bytes": path.stat().st_size,
+        }
+        for path in sorted(set(input_paths))
+    ]
+    code_root = Path(__file__).resolve().parents[2]
+    code_entries = [
+        {
+            "path": str(path.relative_to(code_root)).replace("\\", "/"),
+            "sha256": file_sha256(path),
+            "bytes": path.stat().st_size,
+        }
+        for path in sorted(Path(__file__).resolve().parent.glob("*.py"))
+    ]
+    manifest_context = {
         "model": config["model"],
         "run_id": run_id,
         "run_at": run_at,
@@ -907,22 +927,11 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
         "account_version": int(account["state_version"]),
         "account_state_sha256": str(account["state_sha256"]),
         "order_envelope_schema_version": 1,
-        "input_files": [
-            {"path": str(path.relative_to(root)), "sha256": file_sha256(path)} for path in sorted(set(input_paths))
-        ],
-        "code_files": [
-            {"path": str(path.relative_to(Path(__file__).resolve().parents[2])), "sha256": file_sha256(path)}
-            for path in sorted(Path(__file__).resolve().parent.glob("*.py"))
-        ],
+        "input_files": input_entries,
+        "code_files": code_entries,
         "runtime": {"python": platform.python_version(), "pandas": pd.__version__},
-        "outputs": {
-            key: str(path.relative_to(root))
-            for key, path in paths.items()
-            if key not in {"manifest", "order_state"}
-        },
     }
-    write_json(manifest, paths["manifest"])
-    manifest_sha256 = file_sha256(paths["manifest"])
+    order_binding_sha256 = canonical_sha256(manifest_context)
     final_orders = (
         plan_orders(
             scored,
@@ -931,7 +940,7 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
             config,
             as_of_ts,
             run_id=run_id,
-            run_manifest_sha256=manifest_sha256,
+            run_manifest_sha256=order_binding_sha256,
             trade_calendar_sha256=trade_calendar_sha256,
             risk_state_at_signal=risk_state_at_signal,
         )
@@ -940,7 +949,29 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
     )
     if len(final_orders) != len(orders):
         raise AssertionError("sealing the run manifest changed the order plan")
-    final_orders.to_csv(paths["orders"], index=False, encoding="utf-8-sig")
+    publisher.write_json("readiness.json", readiness, schema_version=1)
+    publisher.write_json("account_summary.json", account_report, schema_version=1)
+    publisher.write_csv("candidate_decisions.csv", scored, schema_version=1)
+    publisher.write_csv("target_weights.csv", targets, schema_version=1)
+    publisher.write_csv("order_intents.csv", final_orders, schema_version=1)
+    publisher.write_csv("timing_proxy_latest.csv", proxies, schema_version=1)
+    publisher.write_csv("timing_proxy_historical_setups.csv", setups, schema_version=1)
+    publisher.write_csv("agent_decision_log.csv", agents, schema_version=1)
+    published = publisher.finalize(manifest_context)
+    paths = {
+        "readiness": published["run"] / "readiness.json",
+        "account": published["run"] / "account_summary.json",
+        "candidates": published["run"] / "candidate_decisions.csv",
+        "targets": published["run"] / "target_weights.csv",
+        "orders": published["run"] / "order_intents.csv",
+        "proxies": published["run"] / "timing_proxy_latest.csv",
+        "setups": published["run"] / "timing_proxy_historical_setups.csv",
+        "agents": published["run"] / "agent_decision_log.csv",
+        "manifest": published["manifest"],
+        "seal": published["seal"],
+        "current": published["current"],
+        "order_state": order_state_path,
+    }
     existing_order_state = read_json(order_state_path) if order_state_path.exists() else None
     if existing_order_state is not None:
         normalize_order_state_book(existing_order_state)

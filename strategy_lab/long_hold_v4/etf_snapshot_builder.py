@@ -23,7 +23,7 @@ import pandas as pd
 import requests
 
 from .etf_index_registry import INDEX_REGISTRY_PATH, active_index_map
-from .snapshot_store import write_snapshot_part
+from .snapshot_store import snapshot_write_lock, write_snapshot_part
 from .stock_snapshot_builder import _fetch_cached, _now, _write_csv, china_10y_latest, fetch_china_10y
 
 
@@ -693,7 +693,7 @@ def _index_data(mapping: dict[str, str], as_of: pd.Timestamp, raw: Path, refresh
     }
 
 
-def run_builder(as_of: pd.Timestamp, max_assets: int, refresh: bool, sleep_seconds: float) -> dict[str, Any]:
+def _run_builder(as_of: pd.Timestamp, max_assets: int, refresh: bool, sleep_seconds: float) -> dict[str, Any]:
     if max_assets <= 0:
         raise ValueError("max_assets must be positive")
     raw = RAW_ROOT / "etf_raw" / as_of.strftime("%Y%m%d")
@@ -767,7 +767,20 @@ def run_builder(as_of: pd.Timestamp, max_assets: int, refresh: bool, sleep_secon
             time.sleep(sleep_seconds)
 
     snapshot = pd.DataFrame(rows).sort_values("asset").reset_index(drop=True) if rows else pd.DataFrame()
-    combined = write_snapshot_part("etf", snapshot)
+    combined = write_snapshot_part(
+        "etf",
+        snapshot,
+        builder_config={
+            "as_of_date": str(as_of.date()),
+            "max_assets": max_assets,
+            "refresh": refresh,
+        },
+        builder_code_paths=[
+            Path(__file__),
+            Path(__file__).with_name("etf_index_registry.py"),
+            Path(__file__).with_name("snapshot_store.py"),
+        ],
+    )
     manifest_frame = pd.DataFrame(manifest)
     manifest_path = RAW_ROOT / "manifests" / f"etf_snapshot_{as_of.strftime('%Y%m%d')}.csv"
     _write_csv(manifest_frame, manifest_path)
@@ -824,6 +837,11 @@ def run_builder(as_of: pd.Timestamp, max_assets: int, refresh: bool, sleep_secon
     }
     (RAW_ROOT / "etf_snapshot_summary.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
+
+
+def run_builder(as_of: pd.Timestamp, max_assets: int, refresh: bool, sleep_seconds: float) -> dict[str, Any]:
+    with snapshot_write_lock(RAW_ROOT / ".etf_snapshot_builder.lock"):
+        return _run_builder(as_of, max_assets, refresh, sleep_seconds)
 
 
 def main() -> None:

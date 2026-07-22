@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pandas as pd
 
+from strategy_lab.long_hold_v4 import execution as execution_module
 from strategy_lab.long_hold_v4 import recoverable_transaction
 from strategy_lab.long_hold_v4.accounting import apply_account_events, mark_to_market, portfolio_risk_state
 from strategy_lab.long_hold_v4.core import ContractError, load_config
@@ -776,6 +777,31 @@ class LongHoldV4ExecutionTests(unittest.TestCase):
         self.assertTrue(portfolio_risk_state(state, brake["nav_cny"], self.config)["force_t_exit"])
         with self.assertRaisesRegex(ContractError, "missing a held asset price"):
             mark_to_market(state, {}, "2026-07-20", self.config)
+
+    def test_initialize_account_does_not_require_a_current_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config = copy.deepcopy(self.config)
+            config["data"]["account_path"] = "account.json"
+            config["data"]["order_state_path"] = "order_state.json"
+            config["data"]["output_directory"] = "outputs/long_hold_v4/current"
+            config_path = root / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            arguments = [
+                "execution",
+                "--config",
+                str(config_path),
+                "--ledger",
+                str(root / "ledger.csv"),
+                "--initialize-account",
+                "--initial-as-of",
+                "2026-07-22",
+            ]
+            with patch.object(execution_module, "ROOT", root), patch("sys.argv", arguments):
+                execution_module.main()
+            self.assertTrue((root / "account.json").is_file())
+            self.assertTrue((root / "order_state.json").is_file())
+            self.assertFalse((root / "outputs" / "long_hold_v4" / "current").exists())
 
 
 if __name__ == "__main__":

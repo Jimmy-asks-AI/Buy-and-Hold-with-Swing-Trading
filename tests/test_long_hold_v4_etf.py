@@ -1158,27 +1158,46 @@ class LongHoldV4ETFTests(unittest.TestCase):
         )
         self.assertIsNone(provider_circuit_breaker_reason("ETF price response missing fields"))
 
-    def test_etf_snapshot_write_preserves_existing_stock_rows(self):
+    def test_etf_snapshot_write_never_recovers_missing_stock_part_from_old_combined(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             old_combined = snapshot_store.COMBINED_PATH
+            old_manifest = snapshot_store.COMBINED_MANIFEST_PATH
             old_parts = snapshot_store.PART_PATHS
             try:
                 snapshot_store.COMBINED_PATH = root / "research_snapshot.csv"
+                snapshot_store.COMBINED_MANIFEST_PATH = root / "combined_snapshot_manifest.json"
                 snapshot_store.PART_PATHS = {
                     "stock": root / "stock_research_snapshot.csv",
                     "etf": root / "etf_research_snapshot.csv",
                 }
-                pd.DataFrame([{"asset": "600000", "asset_type": "stock", "sector": "bank"}]).to_csv(
+                pd.DataFrame(
+                    [{"as_of_date": "2026-07-17", "asset": "600000", "asset_type": "stock", "sector": "bank"}]
+                ).to_csv(
                     snapshot_store.COMBINED_PATH, index=False, encoding="utf-8-sig"
                 )
                 combined = snapshot_store.write_snapshot_part(
-                    "etf", pd.DataFrame([{"asset": "510880", "asset_type": "etf", "sector": "dividend_index"}])
+                    "etf",
+                    pd.DataFrame(
+                        [
+                            {
+                                "as_of_date": "2026-07-17",
+                                "asset": "510880",
+                                "asset_type": "etf",
+                                "sector": "dividend_index",
+                            }
+                        ]
+                    ),
+                    builder_code_paths=[Path(__file__)],
+                    project_root=root,
                 )
-                self.assertEqual(set(combined["asset"]), {"510880", "600000"})
-                self.assertEqual(len(pd.read_csv(snapshot_store.COMBINED_PATH, encoding="utf-8-sig")), 2)
+                self.assertTrue(combined.empty)
+                self.assertFalse(snapshot_store.PART_PATHS["stock"].exists())
+                self.assertFalse(snapshot_store.COMBINED_MANIFEST_PATH.exists())
+                self.assertEqual(len(pd.read_csv(snapshot_store.COMBINED_PATH, encoding="utf-8-sig")), 1)
             finally:
                 snapshot_store.COMBINED_PATH = old_combined
+                snapshot_store.COMBINED_MANIFEST_PATH = old_manifest
                 snapshot_store.PART_PATHS = old_parts
 
     def test_source_manifest_detects_upstream_file_tampering(self):

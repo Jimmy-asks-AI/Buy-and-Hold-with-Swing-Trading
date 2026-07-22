@@ -71,14 +71,24 @@ ETF现金分红已单独完成正式PIT链。采集器对全状态主表1,701只
 python -X utf8 -m strategy_lab.long_hold_v4.cli --as-of 2026-07-19
 ```
 
-主要输出位于`outputs/long_hold_v4/current/`：
+每次完整运行发布到`outputs/long_hold_v4/runs/<run_id>/`，`outputs/long_hold_v4/current`仅保存指向最后一次完整运行的JSON指针：
 
 - `readiness.json`：能否开展当前研究及阻断原因
 - `candidate_decisions.csv`：长期质量、估值、陷阱、建仓阶段
+- `target_weights.csv`：本次运行的目标权重快照
 - `order_intents.csv`：仅为下一开盘研究意向，不连接券商
 - `timing_proxy_latest.csv`：红利、银行、公用事业、非银指数的价格代理观察
 - `agent_decision_log.csv`：九个规则角色的状态日志；当前不是独立上下文运行的真实多 Agent
-- `run_manifest.json`：配置、输入文件、V4代码和运行环境哈希
+- `run_manifest.json`：配置、输入、代码和全部业务产物的路径、大小、schema版本与SHA-256
+- `run_manifest_seal.json`：对最终`run_manifest.json`进行独立封印
+
+校验当前运行：
+
+```powershell
+python -X utf8 -m strategy_lab.long_hold_v4.run_artifacts verify --output-root outputs/long_hold_v4
+```
+
+崩溃留下的`runs/<run_id>.tmp/`不会覆盖`current`，必须通过显式恢复命令移入隔离区。完整威胁模型和迁移步骤见`data_catalog/long_hold_v4_run_artifact_integrity.md`。
 
 ## 账户与成交回执
 
