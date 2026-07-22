@@ -135,6 +135,7 @@
   "data": {
     "snapshot_path": "data_raw/long_hold_v4/research_snapshot.csv",
     "price_directory": "data_raw/long_hold_v4/prices",
+    "execution_price_directory": "data_raw/long_hold_v4/execution_prices",
     "account_path": "portfolio_lab/long_hold_v4/account.json",
     "order_state_path": "portfolio_lab/long_hold_v4/order_state.json",
     "trade_calendar_path": "data_raw/akshare/calendar/trade_calendar.csv",
