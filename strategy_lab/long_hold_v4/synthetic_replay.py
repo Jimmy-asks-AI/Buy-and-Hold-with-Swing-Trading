@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -226,9 +225,22 @@ def run_synthetic_replay(
 ) -> dict[str, Any]:
     bundle = bundle.resolve()
     output = (output or bundle / "output").resolve()
-    if output.exists():
-        shutil.rmtree(output)
-    output.mkdir(parents=True)
+    protected = {ROOT.resolve(), bundle, bundle.parent.resolve(), Path(output.anchor).resolve()}
+    if output in protected:
+        raise ContractError(f"unsafe synthetic replay output path: {output}")
+    output.mkdir(parents=True, exist_ok=True)
+    allowed_existing = set(CHAIN_FILES).union({"manifest.json"})
+    unexpected = [
+        path.relative_to(output).as_posix()
+        for path in output.rglob("*")
+        if path.is_dir() or path.relative_to(output).as_posix() not in allowed_existing
+    ]
+    if unexpected:
+        raise ContractError(f"synthetic replay output contains unrelated paths: {sorted(unexpected)}")
+    for relative in sorted(allowed_existing):
+        path = output / relative
+        if path.is_file():
+            path.unlink()
     config = load_config(ROOT / "configs" / "long_hold_v4.json")
     snapshot, states, calendar = _synthetic_inputs()
     _validate_market_states(snapshot, states, FILL_DATE)
