@@ -82,7 +82,13 @@ python -X utf8 -m strategy_lab.long_hold_v4.cli --as-of 2026-07-19
 
 ## 账户与成交回执
 
-当前账户已迁移到V2，权威文件为`portfolio_lab/long_hold_v4/account.json`。研究入口只生成意图，不修改账户，也不连接券商。
+当前账户 schema 为V3，包含单调递增的`state_version`和全账户`state_sha256`。权威文件为`portfolio_lab/long_hold_v4/account.json`；缺失时研究链硬阻断，必须显式初始化或迁移。研究入口只生成意图和订单生命周期状态，不修改账户，也不连接券商。
+
+```powershell
+python -X utf8 -m strategy_lab.long_hold_v4.execution --initialize-account --initial-as-of 2026-07-22
+# 已有V1/V2账户使用：
+python -X utf8 -m strategy_lab.long_hold_v4.execution --migrate-account-state
+```
 
 实际或纸面成交发生后，将尚未处理的成交回执填入`portfolio_lab/long_hold_v4/pending_fills.csv`，再运行：
 
@@ -90,15 +96,15 @@ python -X utf8 -m strategy_lab.long_hold_v4.cli --as-of 2026-07-19
 python -X utf8 -m strategy_lab.long_hold_v4.execution --apply
 ```
 
-执行器会校验订单ID、信号日和有效期，计算或读取实际费用，更新核心/T子账、现金、成本和已实现盈亏，并写入`fill_ledger.csv`。同一`fill_id`重复运行不会重复记账；已经处理过的回执内容发生变化会立即失败。
+执行前还需准备含`asset,price,as_of_date`的全持仓估值快照，并通过`--valuation-prices`传入；缺少任一持仓价格时阻断。执行器重新计算完整订单哈希，校验运行清单、配置、账户版本、交易日历、生命周期、有效期、剩余股数和成交价偏离，再由交易日历重算T仓持有日。模拟成交后会复查现金、单资产、行业、核心仓、T仓和最大持仓数量。账户、成交账本与订单状态使用同一可恢复事务提交。
 
 - `fee_mode=model`：用于纸面成交，按配置佣金、税费和滑点估算。
 - `fee_mode=actual`：用于真实交割，必须填写四项实际费用。
 - 买入必须匹配可执行研究意图，不能用`manual_approval`绕过。
-- 核心仓卖出只允许人工批准，模型不会自动卖出。
+- 核心仓卖出只允许信封预先授权的人工批准，`manual_approval`本身不能绕过订单。
 - 当前股票型ETF和股票都按T+1处理。
 
-完整执行整改记录见`reports/LONG_HOLD_V4_GATE_C_EXECUTION_2026-07-17.md`。
+完整字段、威胁模型和迁移说明见`data_catalog/long_hold_v4_order_execution_security.md`。
 
 ## 分红、公司行为与日终净值
 

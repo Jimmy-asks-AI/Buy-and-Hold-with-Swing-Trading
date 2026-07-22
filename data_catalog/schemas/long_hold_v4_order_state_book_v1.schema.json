@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Jimmy-asks-AI/Buy-and-Hold-with-Swing-Trading/schemas/long_hold_v4_order_state_book_v1.schema.json",
+  "title": "Long Hold V4 Order State Book v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "account_version", "account_state_sha256", "current_run_id", "orders", "book_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "account_version": {"type": "integer", "minimum": 0},
+    "account_state_sha256": {"$ref": "#/$defs/sha256"},
+    "current_run_id": {"type": "string"},
+    "orders": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/orderState"}
+    },
+    "book_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "orderState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order_id", "order_sha256", "run_id", "asset", "sleeve", "side",
+        "ordered_shares", "filled_shares", "remaining_shares", "status",
+        "valid_through_date", "superseded_by_order_id", "status_reason",
+        "created_at", "updated_at"
+      ],
+      "properties": {
+        "order_id": {"type": "string", "minLength": 1},
+        "order_sha256": {"$ref": "#/$defs/sha256"},
+        "run_id": {"type": "string", "minLength": 1},
+        "asset": {"type": "string", "pattern": "^[0-9]{6}$"},
+        "sleeve": {"enum": ["core", "t"]},
+        "side": {"enum": ["buy", "sell", "review"]},
+        "ordered_shares": {"type": "integer", "minimum": 0},
+        "filled_shares": {"type": "integer", "minimum": 0},
+        "remaining_shares": {"type": "integer", "minimum": 0},
+        "status": {"enum": ["ACTIVE", "PARTIALLY_FILLED", "FILLED", "CANCELLED", "EXPIRED", "SUPERSEDED"]},
+        "valid_through_date": {"type": "string", "format": "date"},
+        "superseded_by_order_id": {"type": ["string", "null"]},
+        "status_reason": {"type": "string"},
+        "created_at": {"type": "string", "format": "date-time"},
+        "updated_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

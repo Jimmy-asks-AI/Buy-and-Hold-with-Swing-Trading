@@ -23,7 +23,13 @@ from .core import (
 )
 from .backtest import INVESTABLE_RETURN_BASES
 from .accounting import portfolio_risk_state
-from .execution import normalize_account
+from .execution import config_sha256, normalize_account
+from .order_envelope import (
+    ORDER_COLUMNS,
+    normalize_order_state_book,
+    register_order_envelopes,
+    seal_order_envelope,
+)
 
 
 EXPECTED_AGENTS = {
@@ -37,32 +43,6 @@ EXPECTED_AGENTS = {
     "validation_auditor",
     "orchestrator",
 }
-
-ORDER_COLUMNS = [
-    "order_id",
-    "signal_date",
-    "valid_through_date",
-    "asset",
-    "name",
-    "asset_type",
-    "sector",
-    "sleeve",
-    "side",
-    "shares",
-    "indicative_price",
-    "notional",
-    "estimated_cost",
-    "target_core_weight",
-    "target_t_weight_cap",
-    "full_target_weight",
-    "full_target_shares_reference",
-    "core_fraction_at_signal",
-    "t_holding_sessions",
-    "risk_override_allowed",
-    "manual_approval_required",
-    "status",
-    "reason",
-]
 
 PRICE_AUDIT_COLUMNS = [
     "asset",
@@ -104,7 +84,9 @@ def read_json(path: Path) -> dict[str, Any]:
 
 def write_json(data: Any, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    temp = path.with_suffix(path.suffix + ".tmp")
+    temp.write_text(json.dumps(data, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    temp.replace(path)
 
 
 def file_sha256(path: Path) -> str:
@@ -168,13 +150,8 @@ def validate_agent_contracts(path: Path) -> dict[str, Any]:
 
 def load_account(path: Path, config: dict[str, Any], as_of: pd.Timestamp) -> dict[str, Any]:
     if not path.exists():
-        return normalize_account(
-            {
-                "as_of_date": str(as_of.date()),
-                "cash_cny": float(config["account"]["initial_cash_cny"]),
-                "holdings": [],
-            },
-            config,
+        raise ContractError(
+            f"persistent account is missing: {path}; initialize it explicitly before running research"
         )
     account = normalize_account(read_json(path), config)
     if pd.Timestamp(account["as_of_date"]) > pd.Timestamp(as_of).normalize():
@@ -255,6 +232,11 @@ def plan_orders(
     latest_prices: dict[str, float],
     config: dict[str, Any],
     signal_date: str | pd.Timestamp | None = None,
+    *,
+    run_id: str,
+    run_manifest_sha256: str,
+    trade_calendar_sha256: str,
+    risk_state_at_signal: str,
 ) -> pd.DataFrame:
     """Create indicative next-open intents; core sales are never automatic."""
     if targets.empty:
@@ -264,7 +246,9 @@ def plan_orders(
     if pd.isna(signal_ts):
         raise ContractError("order planning requires a valid signal_date")
     signal_ts = pd.Timestamp(signal_ts).normalize()
+    valid_from = signal_ts + pd.Timedelta(days=1)
     valid_through = signal_ts + pd.Timedelta(days=int(config["execution"]["order_valid_calendar_days"]))
+    active_config_sha256 = config_sha256(config)
     nav = account_value(account, latest_prices)
     minimum_cash_cny = nav * float(config["portfolio"]["minimum_cash_weight"])
     cash_available = max(0.0, float(account.get("cash_cny", 0.0)) - minimum_cash_cny)
@@ -306,47 +290,53 @@ def plan_orders(
             manual_approval_required: bool = False,
             risk_override_allowed: bool = False,
         ) -> None:
-            reference = max(base_reference, float(core_shares + shares)) if sleeve == "core" and side == "buy" else base_reference
-            payload = {
-                "signal_date": str(signal_ts.date()),
-                "asset": asset,
-                "sleeve": sleeve,
-                "side": side,
-                "shares": int(shares),
-                "indicative_price": round(price, 8),
-                "target_core_weight": round(float(row.get("target_core_weight", 0.0)), 12),
-                "target_t_weight_cap": round(float(row.get("target_t_weight_cap", 0.0)), 12),
-                "full_target_shares_reference": round(reference, 8),
-                "status": status,
-                "reason": str(reason),
-            }
-            digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
+            reference = (
+                max(base_reference, float(core_shares + shares))
+                if sleeve == "core" and side == "buy"
+                else base_reference
+            )
+            identity = f"{run_id}|{asset}|{sleeve}|{side}|{len(rows)}"
+            identity_digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:16]
+            lifecycle_status = "ACTIVE" if side in {"buy", "sell"} else "CANCELLED"
             rows.append(
-                {
-                    "order_id": f"LHV4-{signal_ts:%Y%m%d}-{asset}-{sleeve}-{side}-{digest}",
-                    "signal_date": str(signal_ts.date()),
-                    "valid_through_date": str(valid_through.date()),
-                    "asset": asset,
-                    "name": row.get("name", ""),
-                    "asset_type": str(row["asset_type"]).lower(),
-                    "sector": str(row.get("sector", "")).lower(),
-                    "sleeve": sleeve,
-                    "side": side,
-                    "shares": int(shares),
-                    "indicative_price": price,
-                    "notional": float(notional),
-                    "estimated_cost": float(estimated_cost),
-                    "target_core_weight": float(row.get("target_core_weight", 0.0)),
-                    "target_t_weight_cap": float(row.get("target_t_weight_cap", 0.0)),
-                    "full_target_weight": full_weight,
-                    "full_target_shares_reference": float(reference),
-                    "core_fraction_at_signal": float(core_fraction),
-                    "t_holding_sessions": t_holding_sessions,
-                    "risk_override_allowed": bool(risk_override_allowed),
-                    "manual_approval_required": bool(manual_approval_required),
-                    "status": status,
-                    "reason": str(reason),
-                }
+                seal_order_envelope(
+                    {
+                        "order_schema_version": 1,
+                        "order_id": f"LHV4-{signal_ts:%Y%m%d}-{asset}-{sleeve}-{side}-{identity_digest}",
+                        "run_id": run_id,
+                        "run_manifest_sha256": run_manifest_sha256,
+                        "config_sha256": active_config_sha256,
+                        "trade_calendar_sha256": trade_calendar_sha256,
+                        "account_version": int(account["state_version"]),
+                        "account_state_sha256": str(account["state_sha256"]),
+                        "signal_date": str(signal_ts.date()),
+                        "valid_from_date": str(valid_from.date()),
+                        "valid_through_date": str(valid_through.date()),
+                        "asset": asset,
+                        "name": row.get("name", ""),
+                        "asset_type": str(row["asset_type"]).lower(),
+                        "sector": str(row.get("sector", "")).lower(),
+                        "sleeve": sleeve,
+                        "side": side,
+                        "shares": int(shares),
+                        "indicative_price": price,
+                        "max_price_deviation_bps": float(config["execution"]["max_price_deviation_bps"]),
+                        "notional": float(notional),
+                        "estimated_cost": float(estimated_cost),
+                        "target_core_weight": float(row.get("target_core_weight", 0.0)),
+                        "target_t_weight_cap": float(row.get("target_t_weight_cap", 0.0)),
+                        "full_target_weight": full_weight,
+                        "full_target_shares_reference": float(reference),
+                        "core_fraction_at_signal": float(core_fraction),
+                        "t_holding_sessions": t_holding_sessions,
+                        "risk_state_at_signal": str(risk_state_at_signal).upper(),
+                        "risk_override_allowed": bool(risk_override_allowed),
+                        "manual_approval_required": bool(manual_approval_required),
+                        "status": lifecycle_status,
+                        "intent_status": status,
+                        "reason": str(reason),
+                    }
+                )
             )
 
         review_reasons: list[str] = []
@@ -505,11 +495,16 @@ def _agent_log(
 
 def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -> dict[str, Path]:
     as_of_ts = pd.Timestamp(as_of).normalize()
+    run_at = datetime.now().isoformat(timespec="microseconds")
+    run_id = f"LHV4-{as_of_ts:%Y%m%d}-{datetime.now():%Y%m%dT%H%M%S%f}"
+    active_config_sha256 = config_sha256(config)
     data_cfg = config["data"]
     output = root / data_cfg["output_directory"]
     output.mkdir(parents=True, exist_ok=True)
     snapshot_path = root / data_cfg["snapshot_path"]
     account_path = root / data_cfg["account_path"]
+    order_state_path = root / data_cfg["order_state_path"]
+    trade_calendar_path = root / data_cfg["trade_calendar_path"]
     agent_contracts_path = root / data_cfg["agent_contracts_path"]
     price_dir = root / data_cfg["price_directory"]
     validate_agent_contracts(agent_contracts_path)
@@ -526,6 +521,10 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
     portfolio_risk: dict[str, Any] | None = None
     snapshot_fresh = False
     input_paths: list[Path] = [agent_contracts_path]
+    trade_calendar_ready = trade_calendar_path.is_file()
+    trade_calendar_sha256 = file_sha256(trade_calendar_path) if trade_calendar_ready else "0" * 64
+    if trade_calendar_ready:
+        input_paths.append(trade_calendar_path)
     source_manifest_failures: list[str] = []
     for relative_path in data_cfg.get("source_manifest_paths", []):
         source_manifest_path = root / relative_path
@@ -738,10 +737,29 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
         and snapshot_fresh
         and investable_prices_fresh
         and portfolio_valuation_ready
+        and trade_calendar_ready
         and not source_manifest_failures
         and not scored.empty
     )
-    orders = plan_orders(scored, account, latest_prices, config, as_of_ts) if data_ready else pd.DataFrame(columns=ORDER_COLUMNS)
+    if portfolio_risk is None and portfolio_valuation_ready:
+        portfolio_risk = portfolio_risk_state(account, account_value(account, latest_prices), config)
+    provisional_manifest_sha256 = "0" * 64
+    risk_state_at_signal = str((portfolio_risk or {}).get("risk_state", "UNKNOWN"))
+    orders = (
+        plan_orders(
+            scored,
+            account,
+            latest_prices,
+            config,
+            as_of_ts,
+            run_id=run_id,
+            run_manifest_sha256=provisional_manifest_sha256,
+            trade_calendar_sha256=trade_calendar_sha256,
+            risk_state_at_signal=risk_state_at_signal,
+        )
+        if data_ready
+        else pd.DataFrame(columns=ORDER_COLUMNS)
+    )
 
     proxy_rows: list[dict[str, Any]] = []
     setup_rows: list[pd.DataFrame] = []
@@ -838,6 +856,7 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
         "fresh_price_asset_count": int(sum(required_price_status.values())),
         "price_gate_failures": price_gate_failures,
         "fresh_timing_proxies": proxies_fresh,
+        "trading_calendar_ready": trade_calendar_ready,
         "source_manifests_ready": not source_manifest_failures,
         "source_manifest_failures": source_manifest_failures,
         "eligible_asset_count": eligible_count,
@@ -851,6 +870,7 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
                 (snapshot_ready and not scored.empty and price_required_count == 0, "no_data_gate_pass_assets"),
                 (snapshot_ready and not investable_prices_fresh, "investable_price_data_stale_or_missing"),
                 (not portfolio_valuation_ready, "held_asset_valuation_unavailable"),
+                (not trade_calendar_ready, "trading_calendar_missing"),
                 (bool(source_manifest_failures), "source_manifest_integrity_failed"),
                 (scored.empty, "no_scored_assets"),
             ]
@@ -869,22 +889,24 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
         "setups": output / "timing_proxy_historical_setups.csv",
         "agents": output / "agent_decision_log.csv",
         "manifest": output / "run_manifest.json",
+        "order_state": order_state_path,
     }
     write_json(readiness, paths["readiness"])
     write_json(account_report, paths["account"])
     scored.to_csv(paths["candidates"], index=False, encoding="utf-8-sig")
-    orders.to_csv(paths["orders"], index=False, encoding="utf-8-sig")
     proxies.to_csv(paths["proxies"], index=False, encoding="utf-8-sig")
     setups.to_csv(paths["setups"], index=False, encoding="utf-8-sig")
     agents.to_csv(paths["agents"], index=False, encoding="utf-8-sig")
     manifest = {
         "model": config["model"],
-        "run_at": datetime.now().isoformat(timespec="seconds"),
+        "run_id": run_id,
+        "run_at": run_at,
         "as_of_date": str(as_of_ts.date()),
         "system_status": system_status,
-        "config_sha256": hashlib.sha256(
-            json.dumps(config, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-        ).hexdigest(),
+        "config_sha256": active_config_sha256,
+        "account_version": int(account["state_version"]),
+        "account_state_sha256": str(account["state_sha256"]),
+        "order_envelope_schema_version": 1,
         "input_files": [
             {"path": str(path.relative_to(root)), "sha256": file_sha256(path)} for path in sorted(set(input_paths))
         ],
@@ -893,7 +915,42 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
             for path in sorted(Path(__file__).resolve().parent.glob("*.py"))
         ],
         "runtime": {"python": platform.python_version(), "pandas": pd.__version__},
-        "outputs": {key: str(path.relative_to(root)) for key, path in paths.items() if key != "manifest"},
+        "outputs": {
+            key: str(path.relative_to(root))
+            for key, path in paths.items()
+            if key not in {"manifest", "order_state"}
+        },
     }
     write_json(manifest, paths["manifest"])
+    manifest_sha256 = file_sha256(paths["manifest"])
+    final_orders = (
+        plan_orders(
+            scored,
+            account,
+            latest_prices,
+            config,
+            as_of_ts,
+            run_id=run_id,
+            run_manifest_sha256=manifest_sha256,
+            trade_calendar_sha256=trade_calendar_sha256,
+            risk_state_at_signal=risk_state_at_signal,
+        )
+        if data_ready
+        else pd.DataFrame(columns=ORDER_COLUMNS)
+    )
+    if len(final_orders) != len(orders):
+        raise AssertionError("sealing the run manifest changed the order plan")
+    final_orders.to_csv(paths["orders"], index=False, encoding="utf-8-sig")
+    existing_order_state = read_json(order_state_path) if order_state_path.exists() else None
+    if existing_order_state is not None:
+        normalize_order_state_book(existing_order_state)
+    next_order_state = register_order_envelopes(
+        existing_order_state,
+        final_orders,
+        run_id=run_id,
+        account_version=int(account["state_version"]),
+        account_state_sha256=str(account["state_sha256"]),
+        registered_at=run_at,
+    )
+    write_json(next_order_state, order_state_path)
     return paths

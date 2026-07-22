@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import io
 import json
 import math
 import os
@@ -15,10 +16,57 @@ from typing import Any
 import pandas as pd
 
 from .core import ContractError, estimate_trade_cost, load_config
+from .order_envelope import (
+    FILLABLE_ORDER_STATES,
+    ORDER_COLUMNS,
+    apply_order_fill,
+    assert_order_state_account_binding,
+    empty_order_state_book,
+    normalize_order_state_book,
+    order_state_record,
+    rebind_order_state_account,
+    refresh_expired_orders,
+    verify_order_frame,
+)
+from .recoverable_transaction import commit_write_set, recover_pending_write_set
 
 
 ROOT = Path(__file__).resolve().parents[2]
-ACCOUNT_SCHEMA_VERSION = 2
+ACCOUNT_SCHEMA_VERSION = 3
+ACCOUNT_FIELDS = {
+    "schema_version",
+    "state_version",
+    "state_sha256",
+    "account_id",
+    "base_currency",
+    "as_of_date",
+    "cash_cny",
+    "holdings",
+    "realized_pnl_cny",
+    "gross_dividend_cny",
+    "dividend_tax_cny",
+    "net_dividend_cny",
+    "processed_fills",
+    "fill_history",
+    "processed_events",
+    "event_history",
+    "nav_history",
+}
+HOLDING_FIELDS = {
+    "asset",
+    "name",
+    "asset_type",
+    "sector",
+    "core_shares",
+    "core_average_cost_cny",
+    "core_open_date",
+    "t_shares",
+    "t_average_cost_cny",
+    "t_open_date",
+    "full_target_shares_reference",
+    "realized_pnl_cny",
+    "cumulative_dividend_net_cny",
+}
 FILL_REQUIRED = {
     "fill_id",
     "fill_date",
@@ -41,6 +89,10 @@ LEDGER_COLUMNS = [
     "fill_id",
     "fill_sha256",
     "order_id",
+    "order_sha256",
+    "run_id",
+    "account_version_before",
+    "account_state_sha256_before",
     "fill_date",
     "asset",
     "name",
@@ -65,9 +117,9 @@ LEDGER_COLUMNS = [
     "fee_mode",
     "manual_approval",
     "manual_reason",
+    "t_holding_sessions",
     "status",
 ]
-EXECUTABLE_ORDER_STATUS = "RESEARCH_INTENT_REPRICE_NEXT_OPEN"
 
 
 def _boolean(value: Any, field: str) -> bool:
@@ -125,6 +177,22 @@ def _asset_code(value: Any) -> str:
     return asset
 
 
+def config_sha256(config: dict[str, Any]) -> str:
+    encoded = json.dumps(
+        config, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _account_state_sha256(account: dict[str, Any]) -> str:
+    payload = copy.deepcopy(account)
+    payload.pop("state_sha256", None)
+    encoded = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _normalized_holding(raw: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise ContractError("each account holding must be an object")
@@ -174,9 +242,27 @@ def _normalized_holding(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def normalize_account(account: dict[str, Any], config: dict[str, Any], as_of: str | pd.Timestamp | None = None) -> dict[str, Any]:
+def normalize_account(
+    account: dict[str, Any],
+    config: dict[str, Any],
+    as_of: str | pd.Timestamp | None = None,
+    *,
+    _verify_state_hash: bool = True,
+) -> dict[str, Any]:
     if not isinstance(account, dict):
         raise ContractError("account must be a JSON object")
+    source_schema_version = _whole_nonnegative(account.get("schema_version", 1), "schema_version")
+    if source_schema_version > ACCOUNT_SCHEMA_VERSION:
+        raise ContractError("account schema version is newer than this runtime")
+    if source_schema_version == ACCOUNT_SCHEMA_VERSION and _verify_state_hash:
+        missing = sorted(ACCOUNT_FIELDS.difference(account))
+        unknown = sorted(set(account).difference(ACCOUNT_FIELDS))
+        if missing or unknown:
+            raise ContractError(f"account v3 fields mismatch: missing={missing} unknown={unknown}")
+        for raw_holding in account.get("holdings", []):
+            if isinstance(raw_holding, dict) and set(raw_holding) != HOLDING_FIELDS:
+                raise ContractError("account v3 holding fields mismatch")
+    state_version = _whole_nonnegative(account.get("state_version", 0), "state_version")
     cash = _nonnegative_number(account.get("cash_cny", -1), "cash_cny")
     holdings_raw = account.get("holdings", [])
     if not isinstance(holdings_raw, list):
@@ -201,6 +287,7 @@ def normalize_account(account: dict[str, Any], config: dict[str, Any], as_of: st
         raise ContractError("account base currency mismatches config")
     normalized = {
         "schema_version": ACCOUNT_SCHEMA_VERSION,
+        "state_version": state_version,
         "account_id": str(account.get("account_id", "long_hold_v4_primary")),
         "base_currency": base_currency,
         "as_of_date": as_of_date,
@@ -216,6 +303,10 @@ def normalize_account(account: dict[str, Any], config: dict[str, Any], as_of: st
         "nav_history": copy.deepcopy(nav_history),
     }
     normalized["net_dividend_cny"] = normalized["gross_dividend_cny"] - normalized["dividend_tax_cny"]
+    if source_schema_version == ACCOUNT_SCHEMA_VERSION and _verify_state_hash:
+        supplied_net_dividend = _finite_number(account.get("net_dividend_cny"), "net_dividend_cny")
+        if not math.isclose(supplied_net_dividend, normalized["net_dividend_cny"], abs_tol=1e-9):
+            raise ContractError("account net_dividend_cny is inconsistent")
     if any(
         pd.Timestamp(item[date_field]) > pd.Timestamp(as_of_date)
         for item in holdings
@@ -297,7 +388,25 @@ def normalize_account(account: dict[str, Any], config: dict[str, Any], as_of: st
             raise ContractError("NAV history peak is not monotonic")
         if item["risk_state"] != expected_state:
             raise ContractError("NAV history risk_state is inconsistent")
+    calculated_state_sha256 = _account_state_sha256(normalized)
+    if source_schema_version >= ACCOUNT_SCHEMA_VERSION and _verify_state_hash:
+        supplied_state_sha256 = str(account.get("state_sha256", "")).strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", supplied_state_sha256):
+            raise ContractError("account state_sha256 must be a lowercase SHA-256 value")
+        if supplied_state_sha256 != calculated_state_sha256:
+            raise ContractError("account state hash mismatch")
+    normalized["state_sha256"] = calculated_state_sha256
     return normalized
+
+
+def seal_account_state(
+    account: dict[str, Any], config: dict[str, Any], *, increment_version: bool
+) -> dict[str, Any]:
+    candidate = copy.deepcopy(account)
+    current_version = _whole_nonnegative(candidate.get("state_version", 0), "state_version")
+    candidate["schema_version"] = ACCOUNT_SCHEMA_VERSION
+    candidate["state_version"] = current_version + (1 if increment_version else 0)
+    return normalize_account(candidate, config, _verify_state_hash=False)
 
 
 def _fill_hash(row: pd.Series) -> str:
@@ -339,60 +448,88 @@ def _prepare_fills(fills: pd.DataFrame) -> pd.DataFrame:
     out["price"] = pd.to_numeric(out["price"], errors="coerce")
     if out["price"].isna().any() or (~out["price"].map(math.isfinite)).any() or (out["price"] <= 0).any():
         raise ContractError("fill price must be finite and positive")
+    if out["fill_date"].dt.normalize().nunique() > 1:
+        raise ContractError("one execution batch cannot span multiple fill dates")
     return out.sort_values(["fill_date", "fill_id"]).reset_index(drop=True)
 
 
-def _approved_order(row: pd.Series, approved_orders: pd.DataFrame | None) -> pd.Series | None:
-    if bool(row["manual_approval"]):
-        if str(row["side"]) != "sell":
-            raise ContractError("manual approval cannot bypass a buy order")
-        if not str(row["manual_reason"]).strip():
-            raise ContractError("manual sell requires manual_reason")
-        if str(row["sleeve"]) == "t" and not bool(row["risk_override"]):
-            raise ContractError("manual T sell requires risk_override")
-        return None
-    if approved_orders is None or approved_orders.empty:
+def _approved_order(
+    row: pd.Series,
+    approved_orders: pd.DataFrame,
+    order_state_book: dict[str, Any],
+    account: dict[str, Any],
+    *,
+    expected_run_manifest_sha256: str,
+    expected_run_id: str,
+    expected_config_sha256: str,
+    expected_trade_calendar_sha256: str,
+) -> pd.Series:
+    if approved_orders.empty:
         raise ContractError(f"fill {row['fill_id']} has no approved order source")
-    required = {
-        "order_id",
-        "signal_date",
-        "valid_through_date",
-        "asset",
-        "asset_type",
-        "sector",
-        "sleeve",
-        "side",
-        "shares",
-        "status",
-        "risk_override_allowed",
-    }
-    missing = sorted(required.difference(approved_orders.columns))
-    if missing:
-        raise ContractError(f"approved orders missing columns: {missing}")
     matches = approved_orders[approved_orders["order_id"].astype(str) == str(row["order_id"])]
     if len(matches) != 1:
         raise ContractError(f"fill {row['fill_id']} must match exactly one approved order")
     order = matches.iloc[0]
-    if str(order["status"]) != EXECUTABLE_ORDER_STATUS:
-        raise ContractError(f"fill {row['fill_id']} matched a non-executable order")
+    record = order_state_record(order_state_book, str(order["order_id"]))
+    if record["order_sha256"] != str(order["order_sha256"]):
+        raise ContractError("order state hash does not match the approved envelope")
+    if record["status"] not in FILLABLE_ORDER_STATES:
+        raise ContractError(f"order is not fillable: {record['order_id']}/{record['status']}")
+    if record["run_id"] != str(order["run_id"]):
+        raise ContractError("order run binding mismatches its lifecycle state")
+    if str(order["run_id"]) != expected_run_id or order_state_book["current_run_id"] != expected_run_id:
+        raise ContractError("order run id does not match the active run manifest")
+    if str(order["run_manifest_sha256"]) != expected_run_manifest_sha256:
+        raise ContractError("order run manifest binding mismatch")
+    if str(order["config_sha256"]) != expected_config_sha256:
+        raise ContractError("order config binding mismatch")
+    if str(order["trade_calendar_sha256"]) != expected_trade_calendar_sha256:
+        raise ContractError("order trading-calendar binding mismatch")
+    if record["filled_shares"] == 0 and (
+        int(order["account_version"]) != int(account["state_version"])
+        or str(order["account_state_sha256"]) != str(account["state_sha256"])
+    ):
+        raise ContractError("unfilled order is stale relative to the account state")
+    manual_approval = bool(row["manual_approval"])
+    manual_required = bool(order["manual_approval_required"])
+    if manual_required and not manual_approval:
+        raise ContractError("approved order requires explicit manual approval")
+    if manual_approval and not str(row["manual_reason"]).strip():
+        raise ContractError("manual approval requires manual_reason")
+    if str(row["sleeve"]) == "core" and str(row["side"]) == "sell" and not (
+        manual_required and manual_approval
+    ):
+        raise ContractError("core sell requires an envelope-authorized manual approval")
     if bool(row["risk_override"]) and not _boolean(order["risk_override_allowed"], "risk_override_allowed"):
         raise ContractError("fill risk_override is not authorized by the approved order")
-    for field in ["asset", "asset_type", "sector", "sleeve", "side"]:
+    if bool(row["risk_override"]) and not manual_approval:
+        raise ContractError("risk override requires explicit manual approval")
+    if str(row["side"]) == "buy":
+        risk_state = str(order["risk_state_at_signal"])
+        if str(row["sleeve"]) == "core" and risk_state == "BRAKE":
+            raise ContractError("core buy is blocked by the envelope risk state")
+        if str(row["sleeve"]) == "t" and risk_state != "NORMAL":
+            raise ContractError("T buy requires a NORMAL envelope risk state")
+    for field in ["asset", "name", "asset_type", "sector", "sleeve", "side"]:
         order_value = _asset_code(order[field]) if field == "asset" else str(order[field]).strip().lower()
         if order_value != str(row[field]).strip().lower():
             raise ContractError(f"fill {row['fill_id']} mismatches approved order field {field}")
-    if _shares(order["shares"], "approved order shares") < int(row["shares"]):
-        raise ContractError(f"fill {row['fill_id']} exceeds approved shares")
+    if int(row["shares"]) > int(record["remaining_shares"]):
+        raise ContractError(f"fill {row['fill_id']} exceeds remaining approved shares")
     signal_date = pd.to_datetime(order["signal_date"], errors="coerce")
+    valid_from = pd.to_datetime(order["valid_from_date"], errors="coerce")
     valid_through = pd.to_datetime(order["valid_through_date"], errors="coerce")
-    if pd.isna(signal_date) or pd.isna(valid_through) or pd.Timestamp(valid_through) <= pd.Timestamp(signal_date):
+    if pd.isna(signal_date) or pd.isna(valid_from) or pd.isna(valid_through):
         raise ContractError("approved order has invalid signal or validity dates")
     signal_date = pd.Timestamp(signal_date).normalize()
+    valid_from = pd.Timestamp(valid_from).normalize()
     valid_through = pd.Timestamp(valid_through).normalize()
-    if pd.Timestamp(row["fill_date"]).normalize() <= signal_date:
-        raise ContractError("close signal fill must occur on a later date")
-    if pd.Timestamp(row["fill_date"]).normalize() > valid_through:
-        raise ContractError("fill occurs after approved order expiry")
+    fill_date = pd.Timestamp(row["fill_date"]).normalize()
+    if fill_date < valid_from or fill_date > valid_through or valid_from <= signal_date:
+        raise ContractError("fill is outside the approved order validity window")
+    deviation_bps = abs(float(row["price"]) / float(order["indicative_price"]) - 1.0) * 10_000.0
+    if deviation_bps > float(order.get("max_price_deviation_bps", float("nan"))):
+        raise ContractError("fill price exceeds the envelope deviation limit")
     return order
 
 
@@ -418,17 +555,147 @@ def _costs(row: pd.Series, config: dict[str, Any]) -> dict[str, float]:
     }
 
 
+def _trading_dates(trading_calendar: pd.DataFrame) -> pd.DatetimeIndex:
+    if not isinstance(trading_calendar, pd.DataFrame) or trading_calendar.empty:
+        raise ContractError("execution requires a non-empty trading calendar")
+    date_column = next((name for name in ("date", "trade_date", "calendar_date") if name in trading_calendar), None)
+    if date_column is None:
+        raise ContractError("trading calendar requires date, trade_date, or calendar_date")
+    rows = trading_calendar.copy()
+    if "is_trading_day" in rows:
+        rows = rows[rows["is_trading_day"].map(lambda value: _boolean(value, "is_trading_day"))]
+    elif "is_open" in rows:
+        rows = rows[rows["is_open"].map(lambda value: _boolean(value, "is_open"))]
+    dates = pd.to_datetime(rows[date_column], errors="coerce").dropna().dt.normalize().drop_duplicates().sort_values()
+    if dates.empty:
+        raise ContractError("trading calendar contains no valid open dates")
+    return pd.DatetimeIndex(dates)
+
+
+def _holding_trade_sessions(trading_dates: pd.DatetimeIndex, open_date: Any, fill_date: Any) -> int:
+    opened = pd.to_datetime(open_date, errors="coerce")
+    filled = pd.to_datetime(fill_date, errors="coerce")
+    if pd.isna(opened) or pd.isna(filled):
+        raise ContractError("T holding dates must be valid")
+    opened = pd.Timestamp(opened).normalize()
+    filled = pd.Timestamp(filled).normalize()
+    return int(((trading_dates >= opened) & (trading_dates <= filled)).sum())
+
+
+def _post_fill_portfolio_check(
+    account: dict[str, Any], valuation_prices: dict[str, float], config: dict[str, Any]
+) -> None:
+    holdings = [
+        item
+        for item in account["holdings"]
+        if int(item["core_shares"]) > 0 or int(item["t_shares"]) > 0
+    ]
+    if len(holdings) > int(config["universe"]["maximum_assets"]):
+        raise ContractError("post-fill portfolio exceeds maximum holding count")
+    market_values: dict[str, float] = {}
+    for holding in holdings:
+        asset = str(holding["asset"])
+        if asset not in valuation_prices:
+            raise ContractError(f"post-fill risk check is missing a held asset price: {asset}")
+        price = _nonnegative_number(valuation_prices[asset], f"valuation price[{asset}]")
+        if price <= 0:
+            raise ContractError(f"post-fill valuation price must be positive: {asset}")
+        market_values[asset] = (int(holding["core_shares"]) + int(holding["t_shares"])) * price
+    nav = float(account["cash_cny"] + sum(market_values.values()))
+    if nav <= 0 or not math.isfinite(nav):
+        raise ContractError("post-fill account NAV must be finite and positive")
+    tolerance = 1e-9
+    if float(account["cash_cny"]) / nav + tolerance < float(config["portfolio"]["minimum_cash_weight"]):
+        raise ContractError("post-fill portfolio breaches minimum cash weight")
+    sector_values: dict[str, float] = {}
+    core_value = 0.0
+    t_value = 0.0
+    for holding in holdings:
+        asset = str(holding["asset"])
+        price = float(valuation_prices[asset])
+        asset_value = market_values[asset]
+        cap = float(config["portfolio"][f"max_single_{holding['asset_type']}_weight"])
+        if asset_value / nav > cap + tolerance:
+            raise ContractError(f"post-fill portfolio breaches single-asset cap: {asset}")
+        sector = str(holding["sector"])
+        sector_values[sector] = sector_values.get(sector, 0.0) + asset_value
+        core_value += int(holding["core_shares"]) * price
+        t_value += int(holding["t_shares"]) * price
+        if int(holding["t_shares"]) > 0:
+            reference = float(holding["full_target_shares_reference"])
+            if int(holding["core_shares"]) <= 0 or reference <= 0:
+                raise ContractError("post-fill T sleeve lacks a valid core holding")
+            core_fraction = int(holding["core_shares"]) / reference
+            if core_fraction + tolerance < float(config["t_strategy"]["core_fraction_required"]):
+                raise ContractError("post-fill T sleeve is under-supported by the core holding")
+            t_share_cap = reference * float(config["t_strategy"]["t_sleeve_fraction_of_full_position"])
+            if int(holding["t_shares"]) > t_share_cap + tolerance:
+                raise ContractError("post-fill T sleeve exceeds its per-asset share cap")
+    if any(
+        value / nav > float(config["portfolio"]["max_sector_weight"]) + tolerance
+        for value in sector_values.values()
+    ):
+        raise ContractError("post-fill portfolio breaches sector cap")
+    if core_value / nav > float(config["portfolio"]["target_core_exposure"]) + tolerance:
+        raise ContractError("post-fill portfolio breaches aggregate core cap")
+    if t_value / nav > float(config["t_strategy"]["portfolio_t_weight_cap"]) + tolerance:
+        raise ContractError("post-fill portfolio breaches aggregate T cap")
+
+
 def apply_fills(
     account: dict[str, Any],
     fills: pd.DataFrame,
     config: dict[str, Any],
-    approved_orders: pd.DataFrame | None = None,
-) -> tuple[dict[str, Any], pd.DataFrame]:
+    *,
+    approved_orders: pd.DataFrame,
+    order_state_book: dict[str, Any],
+    trading_calendar: pd.DataFrame,
+    valuation_prices: dict[str, float],
+    valuation_as_of_date: str | pd.Timestamp,
+    run_manifest_sha256: str,
+    expected_run_id: str,
+    expected_config_sha256: str,
+    trading_calendar_sha256: str,
+) -> tuple[dict[str, Any], pd.DataFrame, dict[str, Any]]:
     state = normalize_account(account, config)
+    runtime_config_sha256 = config_sha256(config)
+    if expected_config_sha256 != runtime_config_sha256:
+        raise ContractError("execution config hash does not match the approved run")
+    if not re.fullmatch(r"[0-9a-f]{64}", str(run_manifest_sha256)):
+        raise ContractError("execution requires a valid run manifest SHA-256")
+    if not str(expected_run_id).strip():
+        raise ContractError("execution requires a non-empty run id")
+    if not re.fullmatch(r"[0-9a-f]{64}", str(trading_calendar_sha256)):
+        raise ContractError("execution requires a valid trading calendar SHA-256")
+    orders = verify_order_frame(approved_orders)
+    book = assert_order_state_account_binding(
+        order_state_book, state["state_version"], state["state_sha256"]
+    )
     prepared = _prepare_fills(fills)
+    trading_dates = _trading_dates(trading_calendar)
+    if not prepared.empty:
+        batch_date = pd.Timestamp(prepared.iloc[0]["fill_date"]).normalize()
+        if batch_date not in trading_dates:
+            raise ContractError("fill date is not an open session in the trading calendar")
+        valuation_date = pd.to_datetime(valuation_as_of_date, errors="coerce")
+        if pd.isna(valuation_date):
+            raise ContractError("execution valuation snapshot requires a valid as_of date")
+        valuation_age = int((batch_date - pd.Timestamp(valuation_date).normalize()).days)
+        if valuation_age < 0 or valuation_age > int(config["model"]["max_price_age_days"]):
+            raise ContractError("execution valuation snapshot is stale or later than the fill date")
+        book = refresh_expired_orders(book, batch_date, updated_at=batch_date.isoformat())
+    prices: dict[str, float] = {}
+    for asset, value in valuation_prices.items():
+        code = _asset_code(asset)
+        price = _nonnegative_number(value, f"valuation price[{code}]")
+        if price <= 0:
+            raise ContractError(f"valuation price must be positive: {code}")
+        prices[code] = price
     processed = {str(item["fill_id"]): str(item["sha256"]) for item in state["processed_fills"]}
-    batch_order_fills: dict[str, int] = {}
     result_rows: list[dict[str, Any]] = []
+    applied_order_ids: set[str] = set()
+    account_version_before = int(state["state_version"])
+    account_hash_before = str(state["state_sha256"])
 
     for _, row in prepared.iterrows():
         fill_id = str(row["fill_id"])
@@ -438,20 +705,18 @@ def apply_fills(
                 raise ContractError(f"fill_id payload changed after processing: {fill_id}")
             result_rows.append({"fill_id": fill_id, "status": "duplicate_ignored"})
             continue
-        order = _approved_order(row, approved_orders)
+        order = _approved_order(
+            row,
+            orders,
+            book,
+            state,
+            expected_run_manifest_sha256=str(run_manifest_sha256),
+            expected_run_id=str(expected_run_id),
+            expected_config_sha256=runtime_config_sha256,
+            expected_trade_calendar_sha256=str(trading_calendar_sha256),
+        )
         if pd.Timestamp(row["fill_date"]).normalize() < pd.Timestamp(state["as_of_date"]):
             raise ContractError(f"fill {fill_id} predates the account state")
-        if order is not None:
-            order_id = str(row["order_id"])
-            already_filled = sum(
-                int(item["shares"])
-                for item in state["fill_history"]
-                if str(item.get("order_id", "")) == order_id and item.get("status") == "applied"
-            )
-            batch_filled = batch_order_fills.get(order_id, 0)
-            if already_filled + batch_filled + int(row["shares"]) > int(float(order["shares"])):
-                raise ContractError(f"aggregate fills exceed approved order shares: {order_id}")
-            batch_order_fills[order_id] = batch_filled + int(row["shares"])
 
         asset = str(row["asset"])
         holding = next((item for item in state["holdings"] if item["asset"] == asset), None)
@@ -479,6 +744,7 @@ def apply_fills(
         costs = _costs(row, config)
         notional = shares * price
         realized = 0.0
+        t_holding_sessions_at_fill: int | None = None
 
         if sleeve == "t" and side == "buy":
             reference = float(holding["full_target_shares_reference"])
@@ -486,7 +752,7 @@ def apply_fills(
             required_core = float(config["t_strategy"]["core_fraction_required"])
             if holding["core_shares"] <= 0 or core_fraction + 1e-9 < required_core:
                 raise ContractError("T buy requires the configured core fraction at fill time")
-            if order is not None and _nonnegative_number(
+            if _nonnegative_number(
                 order.get("core_fraction_at_signal", float("nan")), "core_fraction_at_signal"
             ) + 1e-9 < required_core:
                 raise ContractError("T buy approved order lacks required core fraction")
@@ -504,9 +770,7 @@ def apply_fills(
             if before_shares == 0:
                 holding[f"{sleeve}_open_date"] = str(pd.Timestamp(row["fill_date"]).date())
             if sleeve == "core":
-                reference = order.get("full_target_shares_reference") if order is not None else row.get(
-                    "full_target_shares_reference"
-                )
+                reference = order.get("full_target_shares_reference")
                 reference = _nonnegative_number(reference, "full_target_shares_reference")
                 if reference + 1e-9 < holding["core_shares"]:
                     raise ContractError("core buy full target reference is below resulting core shares")
@@ -514,8 +778,6 @@ def apply_fills(
         else:
             if shares > before_shares:
                 raise ContractError(f"fill {fill_id} attempts to sell more {sleeve} shares than held")
-            if sleeve == "core" and not bool(row["manual_approval"]):
-                raise ContractError("core sell requires explicit manual approval")
             if sleeve == "core" and holding["t_shares"] > 0:
                 remaining_fraction = (before_shares - shares) / float(holding["full_target_shares_reference"])
                 if remaining_fraction + 1e-9 < float(config["t_strategy"]["core_fraction_required"]):
@@ -532,13 +794,12 @@ def apply_fills(
                     )
                 ):
                     raise ContractError(f"{row['asset_type']} T sell violates settlement rules")
-                session_value = order.get("t_holding_sessions", 0) if order is not None else row.get(
-                    "t_holding_sessions", 0
-                )
-                sessions = _whole_nonnegative(session_value, "t_holding_sessions")
-                if sessions < int(config["t_strategy"]["minimum_holding_days"]) and not bool(row["risk_override"]):
+                t_holding_sessions_at_fill = _holding_trade_sessions(trading_dates, open_date, row["fill_date"])
+                if t_holding_sessions_at_fill < int(config["t_strategy"]["minimum_holding_days"]) and not bool(row["risk_override"]):
                     raise ContractError("T sell violates minimum holding sessions")
             proceeds = notional - float(costs["total_cost"])
+            if proceeds < -1e-9:
+                raise ContractError("sell transaction costs cannot exceed proceeds")
             realized = proceeds - shares * float(holding[cost_key])
             holding[share_key] = before_shares - shares
             state["cash_cny"] += proceeds
@@ -548,6 +809,8 @@ def apply_fills(
                 if sleeve == "core":
                     holding["full_target_shares_reference"] = 0.0
 
+        prices[asset] = price
+        _post_fill_portfolio_check(state, prices, config)
         holding["realized_pnl_cny"] = float(holding["realized_pnl_cny"] + realized)
         state["realized_pnl_cny"] = float(state["realized_pnl_cny"] + realized)
         state["as_of_date"] = str(max(pd.Timestamp(state["as_of_date"]), pd.Timestamp(row["fill_date"])).date())
@@ -555,6 +818,10 @@ def apply_fills(
             "fill_id": fill_id,
             "fill_sha256": digest,
             "order_id": str(row["order_id"]),
+            "order_sha256": str(order["order_sha256"]),
+            "run_id": str(order["run_id"]),
+            "account_version_before": account_version_before,
+            "account_state_sha256_before": account_hash_before,
             "fill_date": str(pd.Timestamp(row["fill_date"]).date()),
             "asset": asset,
             "name": str(row.get("name", holding["name"])),
@@ -579,24 +846,35 @@ def apply_fills(
             "fee_mode": str(row["fee_mode"]),
             "manual_approval": bool(row["manual_approval"]),
             "manual_reason": str(row["manual_reason"]),
+            "t_holding_sessions": t_holding_sessions_at_fill,
             "status": "applied",
         }
         state["fill_history"].append(ledger)
         state["processed_fills"].append({"fill_id": fill_id, "sha256": digest})
         processed[fill_id] = digest
+        book = apply_order_fill(book, str(order["order_id"]), shares, updated_at=pd.Timestamp(row["fill_date"]).isoformat())
+        applied_order_ids.add(str(order["order_id"]))
         result_rows.append(ledger)
 
     state["holdings"] = [
         item for item in state["holdings"] if int(item["core_shares"]) > 0 or int(item["t_shares"]) > 0
     ]
-    return state, pd.DataFrame(result_rows)
-
-
-def write_account_atomic(account: dict[str, Any], path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = path.with_suffix(path.suffix + ".tmp")
-    temp_path.write_text(json.dumps(account, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(temp_path, path)
+    if applied_order_ids:
+        state = seal_account_state(state, config, increment_version=True)
+        retained_partial_ids = {
+            order_id
+            for order_id in applied_order_ids
+            if order_state_record(book, order_id)["status"] == "PARTIALLY_FILLED"
+        }
+        book = rebind_order_state_account(
+            book,
+            state["state_version"],
+            state["state_sha256"],
+            updated_at=pd.Timestamp(state["as_of_date"]).isoformat(),
+            retain_partially_filled_order_ids=retained_partial_ids,
+            invalidate_reason="account_state_changed_after_fill",
+        )
+    return state, pd.DataFrame(result_rows), book
 
 
 def write_ledger_view(account: dict[str, Any], path: Path) -> None:
@@ -608,26 +886,243 @@ def write_ledger_view(account: dict[str, Any], path: Path) -> None:
     os.replace(temp_path, path)
 
 
+def _json_bytes(payload: dict[str, Any]) -> bytes:
+    return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+
+
+def _ledger_bytes(account: dict[str, Any]) -> bytes:
+    buffer = io.StringIO()
+    pd.DataFrame(account.get("fill_history", []), columns=LEDGER_COLUMNS).to_csv(buffer, index=False)
+    return b"\xef\xbb\xbf" + buffer.getvalue().encode("utf-8")
+
+
+def execution_transaction_path(account_path: Path) -> Path:
+    return account_path.parent / ".execution_transaction.json"
+
+
+def recover_execution_transaction(
+    account_path: Path, ledger_path: Path, order_state_path: Path
+) -> bool:
+    return recover_pending_write_set(
+        execution_transaction_path(account_path), [account_path, ledger_path, order_state_path]
+    )
+
+
+def commit_execution_transaction(
+    account: dict[str, Any],
+    order_state_book: dict[str, Any],
+    account_path: Path,
+    ledger_path: Path,
+    order_state_path: Path,
+) -> None:
+    if str(account.get("state_sha256", "")) != _account_state_sha256(account):
+        raise ContractError("account state hash is invalid at transaction commit")
+    order_state_book = normalize_order_state_book(order_state_book)
+    if int(order_state_book.get("account_version", -1)) != int(account.get("state_version", -2)) or str(
+        order_state_book.get("account_state_sha256", "")
+    ) != str(account.get("state_sha256", "")):
+        raise ContractError("account and order state book are not transactionally bound")
+    commit_write_set(
+        {
+            account_path: _json_bytes(account),
+            ledger_path: _ledger_bytes(account),
+            order_state_path: _json_bytes(order_state_book),
+        },
+        execution_transaction_path(account_path),
+    )
+
+
+def initialize_persistent_account(
+    account_path: Path,
+    ledger_path: Path,
+    order_state_path: Path,
+    config: dict[str, Any],
+    as_of: str | pd.Timestamp,
+    *,
+    account_id: str = "long_hold_v4_primary",
+) -> dict[str, Any]:
+    recover_execution_transaction(account_path, ledger_path, order_state_path)
+    if account_path.exists() or order_state_path.exists():
+        raise ContractError("persistent account initialization refuses to overwrite existing state")
+    date = _date_or_none(as_of, "initial account as_of")
+    if date is None:
+        raise ContractError("persistent account initialization requires an as_of date")
+    account = seal_account_state(
+        {
+            "schema_version": ACCOUNT_SCHEMA_VERSION,
+            "state_version": 0,
+            "account_id": account_id,
+            "base_currency": config["account"]["base_currency"],
+            "as_of_date": date,
+            "cash_cny": float(config["account"]["initial_cash_cny"]),
+            "holdings": [],
+            "realized_pnl_cny": 0.0,
+            "gross_dividend_cny": 0.0,
+            "dividend_tax_cny": 0.0,
+            "processed_fills": [],
+            "fill_history": [],
+            "processed_events": [],
+            "event_history": [],
+            "nav_history": [
+                {
+                    "date": date,
+                    "nav_cny": float(config["account"]["initial_cash_cny"]),
+                    "cash_cny": float(config["account"]["initial_cash_cny"]),
+                    "market_value_cny": 0.0,
+                    "peak_nav_cny": float(config["account"]["initial_cash_cny"]),
+                    "drawdown": 0.0,
+                    "risk_state": "NORMAL",
+                }
+            ],
+        },
+        config,
+        increment_version=False,
+    )
+    book = empty_order_state_book(account["state_version"], account["state_sha256"])
+    commit_execution_transaction(account, book, account_path, ledger_path, order_state_path)
+    return account
+
+
+def _load_execution_prices(
+    path: Path, fill_date: pd.Timestamp, config: dict[str, Any]
+) -> tuple[dict[str, float], pd.Timestamp]:
+    frame = pd.read_csv(path, encoding="utf-8-sig", dtype={"asset": str})
+    required = {"asset", "price", "as_of_date"}
+    if not required.issubset(frame.columns):
+        raise ContractError(f"execution valuation snapshot missing columns: {sorted(required.difference(frame.columns))}")
+    dates = pd.to_datetime(frame["as_of_date"], errors="coerce").dt.normalize()
+    if dates.isna().any() or dates.nunique() != 1:
+        raise ContractError("execution valuation snapshot must have one valid as_of date")
+    price_date = pd.Timestamp(dates.iloc[0]).normalize()
+    age = int((fill_date.normalize() - price_date).days)
+    if age < 0 or age > int(config["model"]["max_price_age_days"]):
+        raise ContractError("execution valuation snapshot is stale or later than the fill date")
+    if frame["asset"].astype(str).str.zfill(6).duplicated().any():
+        raise ContractError("execution valuation snapshot contains duplicate assets")
+    return (
+        {
+            _asset_code(row["asset"]): _nonnegative_number(row["price"], f"valuation price[{row['asset']}]")
+            for _, row in frame.iterrows()
+        },
+        price_date,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=ROOT / "configs" / "long_hold_v4.json")
-    parser.add_argument("--account", type=Path, default=ROOT / "portfolio_lab" / "long_hold_v4" / "account.json")
+    parser.add_argument("--account", type=Path)
     parser.add_argument("--fills", type=Path, default=ROOT / "portfolio_lab" / "long_hold_v4" / "pending_fills.csv")
-    parser.add_argument("--orders", type=Path, default=ROOT / "outputs" / "long_hold_v4" / "current" / "order_intents.csv")
+    parser.add_argument("--orders", type=Path)
+    parser.add_argument("--order-state", type=Path)
+    parser.add_argument("--manifest", type=Path)
+    parser.add_argument("--calendar", type=Path)
+    parser.add_argument("--valuation-prices", type=Path)
     parser.add_argument("--ledger", type=Path, default=ROOT / "portfolio_lab" / "long_hold_v4" / "fill_ledger.csv")
+    parser.add_argument("--initialize-account", action="store_true")
+    parser.add_argument("--migrate-account-state", action="store_true")
+    parser.add_argument("--initial-as-of")
     parser.add_argument("--apply", action="store_true", help="Persist account changes; default is dry-run")
     args = parser.parse_args()
     config = load_config(args.config)
-    account = json.loads(args.account.read_text(encoding="utf-8"))
+    account_path = args.account or ROOT / config["data"]["account_path"]
+    order_state_path = args.order_state or ROOT / config["data"]["order_state_path"]
+    orders_path = args.orders or ROOT / config["data"]["output_directory"] / "order_intents.csv"
+    manifest_path = args.manifest or ROOT / config["data"]["output_directory"] / "run_manifest.json"
+    calendar_path = args.calendar or ROOT / config["data"]["trade_calendar_path"]
+    valuation_path = args.valuation_prices or ROOT / config["data"]["output_directory"] / "execution_valuation_prices.csv"
+    recover_execution_transaction(account_path, args.ledger, order_state_path)
+    if args.initialize_account:
+        if not args.initial_as_of:
+            raise ContractError("--initialize-account requires --initial-as-of")
+        account = initialize_persistent_account(
+            account_path, args.ledger, order_state_path, config, args.initial_as_of
+        )
+        print(
+            json.dumps(
+                {
+                    "mode": "initialized",
+                    "account_path": str(account_path),
+                    "state_version": account["state_version"],
+                    "state_sha256": account["state_sha256"],
+                },
+                ensure_ascii=False,
+            )
+        )
+        return
+    if not account_path.is_file():
+        raise ContractError(
+            "persistent account is missing; use --initialize-account --initial-as-of YYYY-MM-DD"
+        )
+    raw_account = json.loads(account_path.read_text(encoding="utf-8"))
+    if args.migrate_account_state:
+        if order_state_path.exists():
+            raise ContractError("account migration refuses to overwrite an existing order state book")
+        account = seal_account_state(
+            normalize_account(raw_account, config), config, increment_version=False
+        )
+        book = empty_order_state_book(account["state_version"], account["state_sha256"])
+        commit_execution_transaction(account, book, account_path, args.ledger, order_state_path)
+        print(
+            json.dumps(
+                {
+                    "mode": "migrated",
+                    "account_path": str(account_path),
+                    "schema_version": account["schema_version"],
+                    "state_version": account["state_version"],
+                    "state_sha256": account["state_sha256"],
+                },
+                ensure_ascii=False,
+            )
+        )
+        return
+    if not order_state_path.is_file():
+        raise ContractError("persistent order state book is missing; run explicit account migration")
+    for required_path, label in [
+        (orders_path, "approved order source"),
+        (manifest_path, "run manifest"),
+        (calendar_path, "trading calendar"),
+    ]:
+        if not required_path.is_file():
+            raise ContractError(f"{label} is missing: {required_path}")
+    account = normalize_account(raw_account, config)
     fills = pd.read_csv(args.fills, encoding="utf-8-sig", dtype={"fill_id": str, "order_id": str, "asset": str})
-    orders = pd.read_csv(args.orders, encoding="utf-8-sig", dtype={"order_id": str, "asset": str})
-    state = normalize_account(account, config)
+    orders = pd.read_csv(orders_path, encoding="utf-8-sig", dtype={"order_id": str, "asset": str})
+    order_state = json.loads(order_state_path.read_text(encoding="utf-8"))
+    manifest_bytes = manifest_path.read_bytes()
+    manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
+    runtime_config_sha256 = config_sha256(config)
+    if manifest.get("config_sha256") != runtime_config_sha256 or not str(manifest.get("run_id", "")).strip():
+        raise ContractError("run manifest is not bound to the active config and run id")
+    calendar = pd.read_csv(calendar_path, encoding="utf-8-sig", low_memory=False)
+    state = account
     results = pd.DataFrame()
     if not fills.empty:
-        state, results = apply_fills(state, fills, config, orders)
+        prepared_dates = pd.to_datetime(fills["fill_date"], errors="coerce").dropna().dt.normalize()
+        if len(prepared_dates) != len(fills) or prepared_dates.nunique() != 1:
+            raise ContractError("fills require one valid execution date")
+        if not valuation_path.is_file():
+            raise ContractError(f"execution valuation snapshot is missing: {valuation_path}")
+        valuation_prices, valuation_as_of_date = _load_execution_prices(
+            valuation_path, prepared_dates.iloc[0], config
+        )
+        state, results, order_state = apply_fills(
+            state,
+            fills,
+            config,
+            approved_orders=orders,
+            order_state_book=order_state,
+            trading_calendar=calendar,
+            valuation_prices=valuation_prices,
+            valuation_as_of_date=valuation_as_of_date,
+            run_manifest_sha256=manifest_sha256,
+            expected_run_id=str(manifest["run_id"]),
+            expected_config_sha256=runtime_config_sha256,
+            trading_calendar_sha256=hashlib.sha256(calendar_path.read_bytes()).hexdigest(),
+        )
     if args.apply:
-        write_account_atomic(state, args.account)
-        write_ledger_view(state, args.ledger)
+        commit_execution_transaction(state, order_state, account_path, args.ledger, order_state_path)
     print(
         json.dumps(
             {
@@ -636,7 +1131,9 @@ def main() -> None:
                 "result_rows": len(results),
                 "cash_cny": state["cash_cny"],
                 "holding_count": len(state["holdings"]),
-                "account_path": str(args.account),
+                "account_path": str(account_path),
+                "state_version": state["state_version"],
+                "state_sha256": state["state_sha256"],
             },
             ensure_ascii=False,
         )

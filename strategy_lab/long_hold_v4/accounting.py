@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import math
-import os
 import re
 from pathlib import Path
 from typing import Any
@@ -15,7 +15,12 @@ import pandas as pd
 
 from .backtest import INVESTABLE_RETURN_BASES
 from .core import ContractError, load_config
-from .execution import normalize_account, write_account_atomic
+from .execution import normalize_account, seal_account_state
+from .order_envelope import (
+    assert_order_state_account_binding,
+    rebind_order_state_account,
+)
+from .recoverable_transaction import commit_write_set, recover_pending_write_set
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -151,6 +156,7 @@ def apply_account_events(
     prepared.sort(key=lambda event: (event["event_date"], event["event_id"]))
     processed = {str(item["event_id"]): str(item["sha256"]) for item in state["processed_events"]}
     results: list[dict[str, Any]] = []
+    applied = False
 
     for event in prepared:
         event_id = event["event_id"]
@@ -248,9 +254,10 @@ def apply_account_events(
         state["event_history"].append(ledger)
         state["processed_events"].append({"event_id": event_id, "sha256": digest})
         processed[event_id] = digest
+        applied = True
         results.append(ledger)
 
-    return normalize_account(state, config), results
+    return seal_account_state(state, config, increment_version=applied), results
 
 
 def portfolio_risk_state(account: dict[str, Any], current_nav_cny: float, config: dict[str, Any]) -> dict[str, Any]:
@@ -313,7 +320,7 @@ def mark_to_market(
     state["nav_history"] = history_without_same_date + [mark]
     state["nav_history"].sort(key=lambda item: item["date"])
     state["as_of_date"] = str(max(pd.Timestamp(state["as_of_date"]), pd.Timestamp(as_of_date)).date())
-    return normalize_account(state, config), mark
+    return seal_account_state(state, config, increment_version=True), mark
 
 
 def _latest_prices(root: Path, config: dict[str, Any], account: dict[str, Any], as_of: pd.Timestamp) -> dict[str, float]:
@@ -345,17 +352,40 @@ def _latest_prices(root: Path, config: dict[str, Any], account: dict[str, Any], 
     return latest
 
 
-def _write_csv_atomic(rows: list[dict[str, Any]], columns: list[str], path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_suffix(path.suffix + ".tmp")
-    pd.DataFrame(rows, columns=columns).to_csv(temp, index=False, encoding="utf-8-sig")
-    os.replace(temp, path)
+def _csv_bytes(rows: list[dict[str, Any]], columns: list[str]) -> bytes:
+    buffer = io.StringIO()
+    pd.DataFrame(rows, columns=columns).to_csv(buffer, index=False)
+    return b"\xef\xbb\xbf" + buffer.getvalue().encode("utf-8")
+
+
+def _accounting_journal_path(account_path: Path) -> Path:
+    return account_path.parent / ".accounting_transaction.json"
+
+
+def _commit_accounting_transaction(
+    account: dict[str, Any],
+    order_state: dict[str, Any],
+    account_path: Path,
+    event_ledger_path: Path,
+    nav_ledger_path: Path,
+    order_state_path: Path,
+) -> None:
+    payloads = {
+        account_path: json.dumps(account, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8"),
+        event_ledger_path: _csv_bytes(account["event_history"], EVENT_LEDGER_COLUMNS),
+        nav_ledger_path: _csv_bytes(account["nav_history"], NAV_LEDGER_COLUMNS),
+        order_state_path: json.dumps(order_state, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8"),
+    }
+    commit_write_set(payloads, _accounting_journal_path(account_path))
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=ROOT / "configs" / "long_hold_v4.json")
     parser.add_argument("--account", type=Path, default=ROOT / "portfolio_lab" / "long_hold_v4" / "account.json")
+    parser.add_argument(
+        "--order-state", type=Path, default=ROOT / "portfolio_lab" / "long_hold_v4" / "order_state.json"
+    )
     parser.add_argument(
         "--events", type=Path, default=ROOT / "portfolio_lab" / "long_hold_v4" / "pending_account_events.json"
     )
@@ -369,7 +399,17 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config(args.config)
+    destinations = [args.account, args.event_ledger, args.nav_ledger, args.order_state]
+    recover_pending_write_set(_accounting_journal_path(args.account), destinations)
+    if not args.account.is_file() or not args.order_state.is_file():
+        raise ContractError("accounting requires an initialized account and order state book")
     account = normalize_account(json.loads(args.account.read_text(encoding="utf-8")), config)
+    order_state = assert_order_state_account_binding(
+        json.loads(args.order_state.read_text(encoding="utf-8")),
+        account["state_version"],
+        account["state_sha256"],
+    )
+    starting_state_sha256 = account["state_sha256"]
     events = json.loads(args.events.read_text(encoding="utf-8"))
     if not isinstance(events, list):
         raise ContractError("pending account events must be a JSON list")
@@ -378,10 +418,23 @@ def main() -> None:
     if args.mark:
         mark_date = pd.Timestamp(args.as_of or state["as_of_date"]).normalize()
         state, mark = mark_to_market(state, _latest_prices(ROOT, config, state, mark_date), mark_date, config)
+    if state["state_sha256"] != starting_state_sha256:
+        order_state = rebind_order_state_account(
+            order_state,
+            state["state_version"],
+            state["state_sha256"],
+            updated_at=pd.Timestamp(state["as_of_date"]).isoformat(),
+            invalidate_reason="account_event_or_nav_mark_changed_state",
+        )
     if args.apply:
-        write_account_atomic(state, args.account)
-        _write_csv_atomic(state["event_history"], EVENT_LEDGER_COLUMNS, args.event_ledger)
-        _write_csv_atomic(state["nav_history"], NAV_LEDGER_COLUMNS, args.nav_ledger)
+        _commit_accounting_transaction(
+            state,
+            order_state,
+            args.account,
+            args.event_ledger,
+            args.nav_ledger,
+            args.order_state,
+        )
     print(
         json.dumps(
             {

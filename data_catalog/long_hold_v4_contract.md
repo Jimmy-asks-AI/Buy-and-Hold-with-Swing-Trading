@@ -177,11 +177,9 @@ python -X utf8 -m strategy_lab.long_hold_v4.pit_stock_adjustment_validator
 
 路径：`outputs/long_hold_v4/current/order_intents.csv`
 
-每个可执行意图必须包含：
+完整字段以`data_catalog/schemas/long_hold_v4_order_envelope_v1.schema.json`为准。除`order_sha256`外的全部字段进入规范化SHA-256，包括运行、配置、交易日历、账户版本、有效期、股数、参考价格、最大价格偏离、目标权重、核心仓比例、T仓持有期与风险权限。
 
-`order_id, signal_date, valid_through_date, asset, name, asset_type, sector, sleeve, side, shares, indicative_price, target_core_weight, target_t_weight_cap, full_target_weight, full_target_shares_reference, core_fraction_at_signal, t_holding_sessions, risk_override_allowed, status, reason`
-
-只有`status=RESEARCH_INTENT_REPRICE_NEXT_OPEN`可以匹配成交。`review`行不可成交，只表示需要人工风险复核。
+可执行信封初始`status=ACTIVE`；研究语义保留在`intent_status`。`review`行初始为`CANCELLED`且不可成交。实时状态保存在`portfolio_lab/long_hold_v4/order_state.json`，允许`ACTIVE, PARTIALLY_FILLED, FILLED, CANCELLED, EXPIRED, SUPERSEDED`。
 
 ### 3B. 成交回执
 
@@ -192,11 +190,14 @@ python -X utf8 -m strategy_lab.long_hold_v4.pit_stock_adjustment_validator
 
 - `model`费用模式按配置估算，适合纸面成交。
 - `actual`费用模式必须提供`commission_cny, stamp_duty_cny, transfer_fee_cny, other_fees_cny`。
-- 收盘信号成交日必须晚于信号日且不超过订单有效期。
+- 成交时重新计算订单哈希；订单必须绑定当前运行清单、配置、账户状态和交易日历。
+- 收盘信号成交日必须位于`valid_from_date`至`valid_through_date`，并是交易日历中的开市日。
+- 成交价相对`indicative_price`的偏离不得超过`max_price_deviation_bps`。
 - T买入在成交时再次校验核心仓比例和T仓股数上限。
 - 配置中的单股票/ETF上限约束核心仓和T仓合计；分配器会预留T仓容量。
-- T卖出校验结算规则和最短持有交易日；风险覆盖必须由订单授权。
-- 核心仓卖出必须`manual_approval=true`且提供`manual_reason`。
+- T卖出的最短持有日由执行端交易日历重算，不信任订单CSV中的数值；风险覆盖必须由订单授权并人工确认。
+- 核心仓卖出必须由信封设置`manual_approval_required=true`，回执再设置`manual_approval=true`并提供`manual_reason`。
+- 每笔成交后重新校验最低现金、单资产、行业、核心仓、T仓、最大持仓数和T仓核心支持。
 
 ### 3C. 分红与公司行为
 

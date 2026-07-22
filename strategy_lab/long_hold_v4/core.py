@@ -437,8 +437,11 @@ def validate_config(config: dict[str, Any]) -> None:
         if str(t_strategy.get(f"{asset_type}_settlement", "")).upper() not in {"T+0", "T+1"}:
             raise ContractError(f"unsupported {asset_type} settlement rule")
 
-    execution = _require_config_keys(config["execution"], {"order_valid_calendar_days"}, "execution")
+    execution = _require_config_keys(
+        config["execution"], {"order_valid_calendar_days", "max_price_deviation_bps"}, "execution"
+    )
     _config_int(execution, "order_valid_calendar_days", "execution", minimum=1, maximum=31)
+    _config_float(execution, "max_price_deviation_bps", "execution", minimum=0.0, maximum=10_000.0)
 
     portfolio = _require_config_keys(
         config["portfolio"],
@@ -516,6 +519,8 @@ def validate_config(config: dict[str, Any]) -> None:
             "snapshot_path",
             "price_directory",
             "account_path",
+            "order_state_path",
+            "trade_calendar_path",
             "agent_contracts_path",
             "output_directory",
             "source_manifest_paths",
@@ -523,7 +528,15 @@ def validate_config(config: dict[str, Any]) -> None:
         },
         "data",
     )
-    for key in ("snapshot_path", "price_directory", "account_path", "agent_contracts_path", "output_directory"):
+    for key in (
+        "snapshot_path",
+        "price_directory",
+        "account_path",
+        "order_state_path",
+        "trade_calendar_path",
+        "agent_contracts_path",
+        "output_directory",
+    ):
         _config_path(data, key, "data")
     manifests = data["source_manifest_paths"]
     if not isinstance(manifests, list) or not manifests or any(not isinstance(value, str) or not value.strip() for value in manifests):

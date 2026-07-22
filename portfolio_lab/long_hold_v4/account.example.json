@@ -1,5 +1,6 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
+  "state_version": 0,
   "account_id": "paper_account_example",
   "base_currency": "CNY",
   "as_of_date": "2026-01-01",
@@ -23,5 +24,6 @@
       "risk_state": "NORMAL"
     }
   ],
-  "net_dividend_cny": 0.0
+  "net_dividend_cny": 0.0,
+  "state_sha256": "7de4d724eb4f883b9d75424bfba619c8ba452c17c07a63892d9547fbf523fbc3"
 }
