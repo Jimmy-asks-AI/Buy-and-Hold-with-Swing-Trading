@@ -138,13 +138,13 @@ pip install -r requirements-long-hold-v4.txt
 
 ## 本地配置
 
-先建立本地凭据与纸面账户文件：
+先建立本地凭据、成交回执文件，并显式初始化纸面账户：
 
 ```powershell
 Copy-Item configs/data_credentials.example.json configs/data_credentials.json
-Copy-Item portfolio_lab/long_hold_v4/account.example.json portfolio_lab/long_hold_v4/account.json
 Copy-Item portfolio_lab/long_hold_v4/pending_fills.example.csv portfolio_lab/long_hold_v4/pending_fills.csv
 Copy-Item portfolio_lab/long_hold_v4/account_events.example.json portfolio_lab/long_hold_v4/pending_account_events.json
+python -X utf8 -m strategy_lab.long_hold_v4.execution --initialize-account --initial-as-of 2026-07-22
 ```
 
 在 `configs/data_credentials.json` 中填写自己有权使用的数据接口。该文件已被 `.gitignore` 排除。不要把Token、密码、交割单或真实持仓提交到公开仓库。
@@ -182,6 +182,8 @@ python -X utf8 -m strategy_lab.long_hold_v4.cli --as-of 2026-07-19
 - `current/run_manifest.json`：输入、代码和配置哈希。
 
 研究入口只生成意向，不修改账户，也不连接券商。成交回执与日终记账由 `execution.py` 和 `accounting.py` 独立处理。
+
+订单使用版本化 `OrderEnvelope`，全部执行字段都参与 SHA-256，生命周期另存于本地订单状态账本。成交时会重新校验订单、账户版本、运行清单、配置和交易日历，并在模拟成交后复查全部组合硬约束。旧账户迁移、估值快照格式、手工批准和崩溃恢复说明见 [`data_catalog/long_hold_v4_order_execution_security.md`](data_catalog/long_hold_v4_order_execution_security.md)。
 
 ## 多Agent结构
 

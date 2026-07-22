@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Jimmy-asks-AI/Buy-and-Hold-with-Swing-Trading/schemas/long_hold_v4_order_envelope_v1.schema.json",
+  "title": "Long Hold V4 OrderEnvelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "order_schema_version",
+    "order_id",
+    "order_sha256",
+    "run_id",
+    "run_manifest_sha256",
+    "config_sha256",
+    "trade_calendar_sha256",
+    "account_version",
+    "account_state_sha256",
+    "signal_date",
+    "valid_from_date",
+    "valid_through_date",
+    "asset",
+    "name",
+    "asset_type",
+    "sector",
+    "sleeve",
+    "side",
+    "shares",
+    "indicative_price",
+    "max_price_deviation_bps",
+    "notional",
+    "estimated_cost",
+    "target_core_weight",
+    "target_t_weight_cap",
+    "full_target_weight",
+    "full_target_shares_reference",
+    "core_fraction_at_signal",
+    "t_holding_sessions",
+    "risk_state_at_signal",
+    "risk_override_allowed",
+    "manual_approval_required",
+    "status",
+    "intent_status",
+    "reason"
+  ],
+  "properties": {
+    "order_schema_version": {"const": 1},
+    "order_id": {"type": "string", "minLength": 1},
+    "order_sha256": {"$ref": "#/$defs/sha256"},
+    "run_id": {"type": "string", "minLength": 1},
+    "run_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "config_sha256": {"$ref": "#/$defs/sha256"},
+    "trade_calendar_sha256": {"$ref": "#/$defs/sha256"},
+    "account_version": {"type": "integer", "minimum": 0},
+    "account_state_sha256": {"$ref": "#/$defs/sha256"},
+    "signal_date": {"type": "string", "format": "date"},
+    "valid_from_date": {"type": "string", "format": "date"},
+    "valid_through_date": {"type": "string", "format": "date"},
+    "asset": {"type": "string", "pattern": "^[0-9]{6}$"},
+    "name": {"type": "string", "minLength": 1},
+    "asset_type": {"enum": ["stock", "etf"]},
+    "sector": {"type": "string", "minLength": 1},
+    "sleeve": {"enum": ["core", "t"]},
+    "side": {"enum": ["buy", "sell", "review"]},
+    "shares": {"type": "integer", "minimum": 0},
+    "indicative_price": {"type": "number", "minimum": 0},
+    "max_price_deviation_bps": {"type": "number", "minimum": 0, "maximum": 10000},
+    "notional": {"type": "number", "minimum": 0},
+    "estimated_cost": {"type": "number", "minimum": 0},
+    "target_core_weight": {"$ref": "#/$defs/weight"},
+    "target_t_weight_cap": {"$ref": "#/$defs/weight"},
+    "full_target_weight": {"$ref": "#/$defs/weight"},
+    "full_target_shares_reference": {"type": "number", "minimum": 0},
+    "core_fraction_at_signal": {"$ref": "#/$defs/weight"},
+    "t_holding_sessions": {"type": "integer", "minimum": 0},
+    "risk_state_at_signal": {"enum": ["NORMAL", "REVIEW", "BRAKE", "UNKNOWN"]},
+    "risk_override_allowed": {"type": "boolean"},
+    "manual_approval_required": {"type": "boolean"},
+    "status": {"enum": ["ACTIVE", "PARTIALLY_FILLED", "FILLED", "CANCELLED", "EXPIRED", "SUPERSEDED"]},
+    "intent_status": {"type": "string", "minLength": 1},
+    "reason": {"type": "string"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"side": {"const": "review"}}, "required": ["side"]},
+      "then": {
+        "properties": {
+          "shares": {"const": 0},
+          "notional": {"const": 0},
+          "status": {"const": "CANCELLED"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"side": {"enum": ["buy", "sell"]}}, "required": ["side"]},
+      "then": {
+        "properties": {
+          "shares": {"type": "integer", "minimum": 1},
+          "indicative_price": {"type": "number", "exclusiveMinimum": 0},
+          "notional": {"type": "number", "exclusiveMinimum": 0},
+          "status": {"const": "ACTIVE"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"risk_override_allowed": {"const": true}},
+        "required": ["risk_override_allowed"]
+      },
+      "then": {
+        "properties": {
+          "sleeve": {"const": "t"},
+          "side": {"const": "sell"}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "weight": {"type": "number", "minimum": 0, "maximum": 1}
+  }
+}

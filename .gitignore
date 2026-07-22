@@ -47,3 +47,7 @@ portfolio_lab/long_hold_v4/pending_account_events.json
 portfolio_lab/long_hold_v4/fill_ledger.csv
 portfolio_lab/long_hold_v4/account_event_ledger.csv
 portfolio_lab/long_hold_v4/nav_ledger.csv
+portfolio_lab/long_hold_v4/order_state.json
+portfolio_lab/long_hold_v4/.execution_transaction.json
+portfolio_lab/long_hold_v4/.accounting_transaction.json
+portfolio_lab/long_hold_v4/.*.staged
