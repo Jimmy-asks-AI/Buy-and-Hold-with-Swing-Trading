@@ -13,7 +13,6 @@ from typing import Any
 
 import pandas as pd
 
-from .backtest import INVESTABLE_RETURN_BASES
 from .core import ContractError, load_config
 from .execution import normalize_account, seal_account_state
 from .order_envelope import (
@@ -21,6 +20,7 @@ from .order_envelope import (
     rebind_order_state_account,
 )
 from .recoverable_transaction import commit_write_set, recover_pending_write_set
+from .price_contract import EXECUTABLE_PRICE_BASIS, require_executable_price_basis
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -289,8 +289,14 @@ def portfolio_risk_state(account: dict[str, Any], current_nav_cny: float, config
 
 
 def mark_to_market(
-    account: dict[str, Any], latest_prices: dict[str, float], as_of: str | pd.Timestamp, config: dict[str, Any]
+    account: dict[str, Any],
+    latest_prices: dict[str, float],
+    as_of: str | pd.Timestamp,
+    config: dict[str, Any],
+    *,
+    price_basis: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
+    require_executable_price_basis(price_basis, "mark price_basis")
     state = normalize_account(account, config)
     as_of_date = _date(as_of, "mark as_of")
     if pd.Timestamp(as_of_date) < pd.Timestamp(state["as_of_date"]):
@@ -324,7 +330,7 @@ def mark_to_market(
 
 
 def _latest_prices(root: Path, config: dict[str, Any], account: dict[str, Any], as_of: pd.Timestamp) -> dict[str, float]:
-    price_dir = root / config["data"]["price_directory"]
+    price_dir = root / config["data"]["execution_price_directory"]
     latest: dict[str, float] = {}
     for holding in account["holdings"]:
         asset = holding["asset"]
@@ -332,17 +338,15 @@ def _latest_prices(root: Path, config: dict[str, Any], account: dict[str, Any], 
         if not path.exists():
             raise ContractError(f"held asset price file not found: {asset}")
         prices = pd.read_csv(path, encoding="utf-8-sig", low_memory=False)
-        if "close" not in prices.columns:
-            for candidate in ["close_adj", "adj_close"]:
-                if candidate in prices.columns:
-                    prices = prices.rename(columns={candidate: "close"})
-                    break
-        required = {"date", "close", "return_basis"}
+        required = {"date", "close", "return_basis", "price_basis"}
         if not required.issubset(prices.columns):
             raise ContractError(f"mark price file has an invalid schema: {asset}")
         bases = set(prices["return_basis"].astype(str).str.lower())
-        if not bases or not bases.issubset(INVESTABLE_RETURN_BASES):
-            raise ContractError(f"mark price file has a non-investable return basis: {asset}")
+        if not bases or any(require_executable_price_basis(value, f"mark return_basis[{asset}]") != EXECUTABLE_PRICE_BASIS for value in bases):
+            raise ContractError(f"mark price file has a non-executable return basis: {asset}")
+        price_bases = set(prices["price_basis"].astype(str).str.lower())
+        if price_bases != bases:
+            raise ContractError(f"mark return_basis and price_basis disagree: {asset}")
         prices["date"] = pd.to_datetime(prices["date"], errors="coerce")
         prices["close"] = pd.to_numeric(prices["close"], errors="coerce")
         prices = prices[(prices["date"] <= as_of) & prices["close"].notna()].sort_values("date")
@@ -417,7 +421,13 @@ def main() -> None:
     mark = None
     if args.mark:
         mark_date = pd.Timestamp(args.as_of or state["as_of_date"]).normalize()
-        state, mark = mark_to_market(state, _latest_prices(ROOT, config, state, mark_date), mark_date, config)
+        state, mark = mark_to_market(
+            state,
+            _latest_prices(ROOT, config, state, mark_date),
+            mark_date,
+            config,
+            price_basis=EXECUTABLE_PRICE_BASIS,
+        )
     if state["state_sha256"] != starting_state_sha256:
         order_state = rebind_order_state_account(
             order_state,
