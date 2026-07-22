@@ -765,18 +765,25 @@ class LongHoldV4ExecutionTests(unittest.TestCase):
     def test_nav_marks_drive_review_and_brake_states(self):
         account = core_account(cash_cny=100000.0)
         account["holdings"][0]["core_average_cost_cny"] = 70.0
-        state, first = mark_to_market(account, {"600000": 80.0}, "2026-07-17", self.config)
+        state, first = mark_to_market(account, {"600000": 80.0}, "2026-07-17", self.config, price_basis="unadjusted_executable")
         self.assertEqual(first["nav_cny"], 500000.0)
-        _, corrected = mark_to_market(state, {"600000": 78.0}, "2026-07-17", self.config)
+        _, corrected = mark_to_market(state, {"600000": 78.0}, "2026-07-17", self.config, price_basis="unadjusted_executable")
         self.assertEqual(corrected["peak_nav_cny"], 490000.0)
-        state, review = mark_to_market(state, {"600000": 66.0}, "2026-07-18", self.config)
+        state, review = mark_to_market(state, {"600000": 66.0}, "2026-07-18", self.config, price_basis="unadjusted_executable")
         self.assertEqual(review["risk_state"], "REVIEW")
         self.assertFalse(portfolio_risk_state(state, review["nav_cny"], self.config)["t_buy_allowed"])
-        state, brake = mark_to_market(state, {"600000": 58.0}, "2026-07-19", self.config)
+        state, brake = mark_to_market(state, {"600000": 58.0}, "2026-07-19", self.config, price_basis="unadjusted_executable")
         self.assertEqual(brake["risk_state"], "BRAKE")
         self.assertTrue(portfolio_risk_state(state, brake["nav_cny"], self.config)["force_t_exit"])
         with self.assertRaisesRegex(ContractError, "missing a held asset price"):
-            mark_to_market(state, {}, "2026-07-20", self.config)
+            mark_to_market(state, {}, "2026-07-20", self.config, price_basis="unadjusted_executable")
+
+    def test_mark_to_market_rejects_adjusted_and_total_return_prices(self):
+        account = core_account(cash_cny=100000.0)
+        for basis in ["qfq_adjusted", "hfq_adjusted", "total_return"]:
+            with self.subTest(price_basis=basis):
+                with self.assertRaisesRegex(ContractError, "unadjusted_executable"):
+                    mark_to_market(account, {"600000": 80.0}, "2026-07-17", self.config, price_basis=basis)
 
     def test_initialize_account_does_not_require_a_current_run(self):
         with tempfile.TemporaryDirectory() as temp_dir:
