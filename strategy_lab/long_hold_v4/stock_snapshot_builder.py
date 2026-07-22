@@ -168,6 +168,12 @@ def fetch_asset_raw(asset: str, as_of: pd.Timestamp, refresh: bool) -> tuple[dic
         except Exception:  # noqa: BLE001
             return ak.stock_zh_a_daily(symbol=_sina_symbol(asset), start_date=start, end_date=end, adjust="qfq")
 
+    def fetch_raw_price() -> pd.DataFrame:
+        try:
+            return ak.stock_zh_a_hist(symbol=asset, period="daily", start_date=start, end_date=end, adjust="")
+        except Exception:  # noqa: BLE001
+            return ak.stock_zh_a_daily(symbol=_sina_symbol(asset), start_date=start, end_date=end, adjust="")
+
     fetchers: dict[str, tuple[Path, Callable[[], pd.DataFrame], str]] = {
         "financial": (
             raw / "financial" / f"{asset}.csv",
@@ -194,6 +200,11 @@ def fetch_asset_raw(asset: str, as_of: pd.Timestamp, refresh: bool) -> tuple[dic
             fetch_qfq_price,
             "akshare.qfq.eastmoney_or_sina",
         ),
+        "price_raw": (
+            raw / "price_unadjusted" / f"{asset}.csv",
+            fetch_raw_price,
+            "akshare.unadjusted.eastmoney_or_sina",
+        ),
     }
     datasets: dict[str, pd.DataFrame] = {}
     errors: dict[str, str] = {}
@@ -217,6 +228,51 @@ def _cagr(values: pd.Series) -> float:
     return float((clean.iloc[-1] / clean.iloc[0]) ** (1.0 / (len(clean) - 1)) - 1.0)
 
 
+def _consecutive_fiscal_years(years: list[int], endpoint_count: int) -> bool:
+    selected = [int(value) for value in years[-endpoint_count:]]
+    return len(selected) == endpoint_count and all(
+        current == previous + 1 for previous, current in zip(selected, selected[1:])
+    )
+
+
+def _window_cagr(values: pd.Series, dates: pd.Series, endpoint_count: int) -> dict[str, Any]:
+    numeric = _num(values).tail(endpoint_count)
+    timestamps = pd.to_datetime(dates, errors="coerce").tail(endpoint_count)
+    default = {
+        "value": np.nan,
+        "start_date": pd.NaT,
+        "end_date": pd.NaT,
+        "start_year": np.nan,
+        "end_year": np.nan,
+        "span_years": np.nan,
+    }
+    if len(numeric) != endpoint_count or len(timestamps) != endpoint_count or numeric.isna().any() or timestamps.isna().any():
+        return default
+    fiscal_years = timestamps.dt.year.astype(int).tolist()
+    if not _consecutive_fiscal_years(fiscal_years, endpoint_count):
+        return default
+    start, end = float(numeric.iloc[0]), float(numeric.iloc[-1])
+    start_date, end_date = pd.Timestamp(timestamps.iloc[0]), pd.Timestamp(timestamps.iloc[-1])
+    span_years = float((end_date - start_date).days / 365.25)
+    if start <= 0 or end <= 0 or span_years <= 0:
+        return {
+            **default,
+            "start_date": start_date,
+            "end_date": end_date,
+            "start_year": int(start_date.year),
+            "end_year": int(end_date.year),
+            "span_years": span_years,
+        }
+    return {
+        "value": float((end / start) ** (1.0 / span_years) - 1.0),
+        "start_date": start_date,
+        "end_date": end_date,
+        "start_year": int(start_date.year),
+        "end_year": int(end_date.year),
+        "span_years": span_years,
+    }
+
+
 def _cv(values: pd.Series) -> float:
     clean = _num(values).dropna()
     if len(clean) < 2 or abs(float(clean.mean())) <= 1e-12:
@@ -238,8 +294,26 @@ def _annual_financials(data: pd.DataFrame, as_of: pd.Timestamp) -> pd.DataFrame:
         & out["REPORT_DATE_NAME"].astype(str).str.contains("年报", na=False)
     ].copy()
     out["fiscal_year"] = out["REPORT_DATE"].dt.year
+    duplicate_years = sorted(
+        out.loc[out["fiscal_year"].duplicated(keep=False), "fiscal_year"].dropna().astype(int).unique().tolist()
+    )
     out = out.sort_values(["fiscal_year", "PIT_AVAILABLE_DATE"]).drop_duplicates("fiscal_year", keep="last")
-    return out.sort_values("fiscal_year").tail(5)
+    result = out.sort_values("fiscal_year").tail(6)
+    result.attrs["duplicate_fiscal_years"] = duplicate_years
+    return result
+
+
+def _financial_window_ready(annual: pd.DataFrame, endpoint_count: int) -> bool:
+    if annual.empty:
+        return False
+    years = pd.to_numeric(annual.get("fiscal_year"), errors="coerce")
+    if years.isna().any():
+        return False
+    selected_years = years.astype(int).tolist()[-endpoint_count:]
+    duplicate_years = {int(value) for value in annual.attrs.get("duplicate_fiscal_years", [])}
+    if duplicate_years.intersection(selected_years):
+        return False
+    return _consecutive_fiscal_years(selected_years, endpoint_count)
 
 
 def _dividend_metrics(data: pd.DataFrame, annual_years: list[int], as_of: pd.Timestamp) -> dict[str, Any]:
@@ -250,9 +324,15 @@ def _dividend_metrics(data: pd.DataFrame, annual_years: list[int], as_of: pd.Tim
         "latest_fiscal_dps": np.nan,
         "trailing_12m_dps": np.nan,
         "dividend_available_date": pd.NaT,
+        "dividend_cagr_5y_start_date": pd.NaT,
+        "dividend_cagr_5y_end_date": pd.NaT,
+        "dividend_cagr_5y_start_year": np.nan,
+        "dividend_cagr_5y_end_year": np.nan,
+        "dividend_cagr_5y_span_years": np.nan,
+        "dividend_history_consecutive": False,
     }
     required = {"实施方案公告日期", "派息比例", "派息日", "报告时间"}
-    if not required.issubset(data.columns) or not annual_years:
+    if not required.issubset(data.columns) or not _consecutive_fiscal_years(annual_years, 6):
         return defaults
     out = data.copy()
     out["announcement_date"] = pd.to_datetime(out["实施方案公告日期"], errors="coerce")
@@ -262,16 +342,28 @@ def _dividend_metrics(data: pd.DataFrame, annual_years: list[int], as_of: pd.Tim
     out = out[(out["announcement_date"] <= as_of) & (out["cash_per_10"] > 0)].copy()
     if out.empty:
         return defaults
-    dps_by_year = (out.groupby("fiscal_year")["cash_per_10"].sum() / 10.0).reindex(annual_years, fill_value=0.0)
+    selected_years = annual_years[-6:]
+    dps_by_year = (out.groupby("fiscal_year")["cash_per_10"].sum() / 10.0).reindex(selected_years, fill_value=0.0)
+    dividend_cagr = _window_cagr(
+        dps_by_year.reset_index(drop=True),
+        pd.Series([pd.Timestamp(year=int(year), month=12, day=31) for year in selected_years]),
+        6,
+    )
     cuts = int(((dps_by_year / dps_by_year.shift(1) - 1.0) < -0.10).fillna(False).sum())
     trailing = out[(out["pay_date"] > as_of - pd.Timedelta(days=365)) & (out["pay_date"] <= as_of)]["cash_per_10"].sum() / 10.0
     return {
-        "dividend_years_5y": int((dps_by_year > 0).sum()),
-        "dividend_cagr_5y": _cagr(dps_by_year),
+        "dividend_years_5y": int((dps_by_year.tail(5) > 0).sum()),
+        "dividend_cagr_5y": dividend_cagr["value"],
         "dividend_cut_count_5y": cuts,
         "latest_fiscal_dps": float(dps_by_year.iloc[-1]),
         "trailing_12m_dps": float(trailing),
         "dividend_available_date": out["announcement_date"].max(),
+        "dividend_cagr_5y_start_date": dividend_cagr["start_date"],
+        "dividend_cagr_5y_end_date": dividend_cagr["end_date"],
+        "dividend_cagr_5y_start_year": dividend_cagr["start_year"],
+        "dividend_cagr_5y_end_year": dividend_cagr["end_year"],
+        "dividend_cagr_5y_span_years": dividend_cagr["span_years"],
+        "dividend_history_consecutive": True,
     }
 
 
@@ -546,12 +638,48 @@ def _normalize_price(
     normalized["asset"] = asset
     normalized["asset_type"] = "stock"
     normalized["return_basis"] = "qfq_adjusted"
+    normalized["price_basis"] = "qfq_adjusted"
     normalized["available_date"] = normalized["date"]
     normalized["data_source"] = "akshare.stock_zh_a_hist.qfq"
     normalized["date"] = normalized["date"].dt.strftime("%Y-%m-%d")
     if write_output:
         _write_csv(normalized, RAW_ROOT / "prices" / f"{asset}.csv")
     return normalized, metrics
+
+
+def _normalize_execution_price(data: pd.DataFrame, asset: str, as_of: pd.Timestamp, write_output: bool = True) -> pd.DataFrame:
+    rename = {
+        "日期": "date",
+        "开盘": "open",
+        "收盘": "close",
+        "最高": "high",
+        "最低": "low",
+        "成交量": "volume",
+        "成交额": "amount",
+    }
+    out = data.rename(columns=rename).copy()
+    required = {"date", "open", "high", "low", "close", "volume", "amount"}
+    missing = sorted(required.difference(out.columns))
+    if missing:
+        raise ValueError(f"unadjusted execution price fields missing for {asset}: {missing}")
+    out["date"] = pd.to_datetime(out["date"], errors="coerce").dt.normalize()
+    for column in required.difference({"date"}):
+        out[column] = _num(out[column])
+    out = out[(out["date"] <= as_of) & out[list(required.difference({"date"}))].notna().all(axis=1)].copy()
+    out = out.sort_values("date").drop_duplicates("date", keep="last")
+    if out.empty or (out[["open", "high", "low", "close"]] <= 0).any().any():
+        raise ValueError(f"invalid unadjusted execution prices for {asset}")
+    normalized = out[["date", "open", "high", "low", "close", "volume", "amount"]].copy()
+    normalized["asset"] = asset
+    normalized["asset_type"] = "stock"
+    normalized["return_basis"] = "unadjusted_executable"
+    normalized["price_basis"] = "unadjusted_executable"
+    normalized["available_date"] = normalized["date"]
+    normalized["data_source"] = "akshare.stock_zh_a_hist.unadjusted"
+    normalized["date"] = normalized["date"].dt.strftime("%Y-%m-%d")
+    if write_output:
+        _write_csv(normalized, RAW_ROOT / "execution_prices" / f"{asset}.csv")
+    return normalized
 
 
 def _latest_number(row: pd.Series, columns: list[str], scale: float = 1.0) -> float:
@@ -574,9 +702,12 @@ def build_stock_row(
     asset = str(watch["asset"]).zfill(6)
     sector = str(watch["sector"])
     _, price = _normalize_price(raw["price"], asset, as_of, write_output=write_price_output)
+    _normalize_execution_price(raw["price_raw"], asset, as_of, write_output=write_price_output)
     annual = _annual_financials(raw["financial"], as_of)
     years = annual["fiscal_year"].astype(int).tolist() if not annual.empty else []
-    dividend = _dividend_metrics(raw["dividend"], years, as_of)
+    five_year_financials_ready = _financial_window_ready(annual, 6)
+    three_year_financials_ready = _financial_window_ready(annual, 4)
+    dividend = _dividend_metrics(raw["dividend"], years if five_year_financials_ready else [], as_of)
     pe = _valuation_metrics(raw["pe"], as_of, "pe")
     pb = _valuation_metrics(raw["pb"], as_of, "pb")
 
@@ -594,13 +725,31 @@ def build_stock_row(
         "dividend_years_5y": dividend["dividend_years_5y"],
         "dividend_yield": dividend["trailing_12m_dps"] / price["current_close"] if price["current_close"] > 0 else np.nan,
         "dividend_cagr_5y": dividend["dividend_cagr_5y"],
+        "dividend_cagr_5y_start_date": dividend["dividend_cagr_5y_start_date"],
+        "dividend_cagr_5y_end_date": dividend["dividend_cagr_5y_end_date"],
+        "dividend_cagr_5y_start_year": dividend["dividend_cagr_5y_start_year"],
+        "dividend_cagr_5y_end_year": dividend["dividend_cagr_5y_end_year"],
+        "dividend_cagr_5y_span_years": dividend["dividend_cagr_5y_span_years"],
+        "dividend_history_consecutive": dividend["dividend_history_consecutive"],
         "dividend_cut_count_5y": dividend["dividend_cut_count_5y"],
         "payout_ratio": np.nan,
         "roe_mean_5y": np.nan,
         "roe_std_5y": np.nan,
         "revenue_cagr_5y": np.nan,
+        "revenue_cagr_5y_start_date": pd.NaT,
+        "revenue_cagr_5y_end_date": pd.NaT,
+        "revenue_cagr_5y_start_year": np.nan,
+        "revenue_cagr_5y_end_year": np.nan,
+        "revenue_cagr_5y_span_years": np.nan,
         "profit_cagr_5y": np.nan,
+        "profit_cagr_5y_start_date": pd.NaT,
+        "profit_cagr_5y_end_date": pd.NaT,
+        "profit_cagr_5y_start_year": np.nan,
+        "profit_cagr_5y_end_year": np.nan,
+        "profit_cagr_5y_span_years": np.nan,
         "profit_cv_5y": np.nan,
+        "financial_years_consecutive": False,
+        "financial_metric_status": "insufficient_or_nonconsecutive_fiscal_years",
         "current_pe": pe["current_pe"],
         "current_pb": pb["current_pb"],
         "pe_percentile_5y": pe["pe_percentile_5y"],
@@ -616,12 +765,17 @@ def build_stock_row(
         "core_tier1_ratio": np.nan,
         "solvency_ratio": np.nan,
         "new_business_value_cagr_3y": np.nan,
+        "new_business_value_cagr_3y_start_date": pd.NaT,
+        "new_business_value_cagr_3y_end_date": pd.NaT,
+        "new_business_value_cagr_3y_start_year": np.nan,
+        "new_business_value_cagr_3y_end_year": np.nan,
+        "new_business_value_cagr_3y_span_years": np.nan,
         "debt_to_assets": np.nan,
         "interest_coverage": np.nan,
         "fcf_dividend_coverage": np.nan,
         "current_universe_only": True,
         "historical_backtest_allowed": False,
-        "source_note": "Eastmoney financial notice dates + CNInfo dividends + Baidu valuation + AkShare qfq price",
+        "source_note": "Eastmoney financial notice dates + CNInfo dividends + Baidu valuation + AkShare separated qfq research and unadjusted execution prices",
         "source_errors": "",
     }
     if not annual.empty:
@@ -629,14 +783,28 @@ def build_stock_row(
         revenue = _num(annual.get("TOTALOPERATEREVE"))
         roe = _num(annual.get("ROEJQ")) / 100.0
         latest = annual.iloc[-1]
+        revenue_cagr = _window_cagr(revenue, annual["REPORT_DATE"], 6) if five_year_financials_ready else {}
+        profit_cagr = _window_cagr(profit, annual["REPORT_DATE"], 6) if five_year_financials_ready else {}
         result.update(
             {
-                "positive_profit_years_5y": int((profit > 0).sum()),
-                "roe_mean_5y": float(roe.mean()),
-                "roe_std_5y": float(roe.std(ddof=1)),
-                "revenue_cagr_5y": _cagr(revenue),
-                "profit_cagr_5y": _cagr(profit),
-                "profit_cv_5y": _cv(profit),
+                "positive_profit_years_5y": int((profit.tail(5) > 0).sum()) if five_year_financials_ready else np.nan,
+                "roe_mean_5y": float(roe.tail(5).mean()) if five_year_financials_ready else np.nan,
+                "roe_std_5y": float(roe.tail(5).std(ddof=1)) if five_year_financials_ready else np.nan,
+                "revenue_cagr_5y": revenue_cagr.get("value", np.nan),
+                "revenue_cagr_5y_start_date": revenue_cagr.get("start_date", pd.NaT),
+                "revenue_cagr_5y_end_date": revenue_cagr.get("end_date", pd.NaT),
+                "revenue_cagr_5y_start_year": revenue_cagr.get("start_year", np.nan),
+                "revenue_cagr_5y_end_year": revenue_cagr.get("end_year", np.nan),
+                "revenue_cagr_5y_span_years": revenue_cagr.get("span_years", np.nan),
+                "profit_cagr_5y": profit_cagr.get("value", np.nan),
+                "profit_cagr_5y_start_date": profit_cagr.get("start_date", pd.NaT),
+                "profit_cagr_5y_end_date": profit_cagr.get("end_date", pd.NaT),
+                "profit_cagr_5y_start_year": profit_cagr.get("start_year", np.nan),
+                "profit_cagr_5y_end_year": profit_cagr.get("end_year", np.nan),
+                "profit_cagr_5y_span_years": profit_cagr.get("span_years", np.nan),
+                "profit_cv_5y": _cv(profit.tail(5)) if five_year_financials_ready else np.nan,
+                "financial_years_consecutive": five_year_financials_ready,
+                "financial_metric_status": "ready" if five_year_financials_ready else "nonconsecutive_fiscal_years_blocked",
             }
         )
         eps = _latest_number(latest, ["EPSJB"])
@@ -648,8 +816,14 @@ def build_stock_row(
             result["core_tier1_ratio"] = _latest_number(latest, ["HXYJBCZL"], 0.01)
         elif sector == "insurance":
             result["solvency_ratio"] = _latest_number(latest, ["SOLVENCY_AR"], 0.01)
-            nbv = _num(annual.get("NBV_LIFE")).dropna().tail(3)
-            result["new_business_value_cagr_3y"] = _cagr(nbv)
+            if three_year_financials_ready:
+                nbv_cagr = _window_cagr(_num(annual.get("NBV_LIFE")), annual["REPORT_DATE"], 4)
+                result["new_business_value_cagr_3y"] = nbv_cagr["value"]
+                result["new_business_value_cagr_3y_start_date"] = nbv_cagr["start_date"]
+                result["new_business_value_cagr_3y_end_date"] = nbv_cagr["end_date"]
+                result["new_business_value_cagr_3y_start_year"] = nbv_cagr["start_year"]
+                result["new_business_value_cagr_3y_end_year"] = nbv_cagr["end_year"]
+                result["new_business_value_cagr_3y_span_years"] = nbv_cagr["span_years"]
         else:
             result["debt_to_assets"] = _latest_number(latest, ["ZCFZL"], 0.01)
             result["interest_coverage"] = _latest_number(latest, ["INTEREST_COVERAGE_RATIO"])
@@ -669,6 +843,9 @@ def build_stock_row(
         ]
         valid_dates = [pd.Timestamp(value) for value in available_dates if pd.notna(value)]
         result["available_date"] = max(valid_dates).strftime("%Y-%m-%d") if valid_dates else pd.NaT
+    if not five_year_financials_ready:
+        prior_errors = str(result.get("source_errors", "")).strip()
+        result["source_errors"] = ";".join(filter(None, [prior_errors, "nonconsecutive_fiscal_years_blocked"]))
     if pd.notna(result["dividend_yield"]):
         result["yield_spread_cn10y"] = float(result["dividend_yield"] - china_10y)
     return result
@@ -700,11 +877,15 @@ def finalize_snapshot(rows: list[dict[str, Any]]) -> pd.DataFrame:
     ).rank(pct=True, method="average")
     columns = [
         "as_of_date", "available_date", "asset", "name", "asset_type", "sector", "is_tradeable", "is_st", "history_years",
-        "positive_profit_years_5y", "dividend_years_5y", "dividend_yield", "dividend_cagr_5y", "dividend_cut_count_5y", "payout_ratio",
-        "roe_mean_5y", "roe_std_5y", "revenue_cagr_5y", "profit_cagr_5y", "profit_cv_5y", "current_pe", "current_pb",
+        "positive_profit_years_5y", "dividend_years_5y", "dividend_yield", "dividend_cagr_5y", "dividend_cagr_5y_start_date",
+        "dividend_cagr_5y_end_date", "dividend_cagr_5y_start_year", "dividend_cagr_5y_end_year", "dividend_cagr_5y_span_years", "dividend_history_consecutive", "dividend_cut_count_5y", "payout_ratio",
+        "roe_mean_5y", "roe_std_5y", "revenue_cagr_5y", "revenue_cagr_5y_start_date", "revenue_cagr_5y_end_date",
+        "revenue_cagr_5y_start_year", "revenue_cagr_5y_end_year", "revenue_cagr_5y_span_years", "profit_cagr_5y", "profit_cagr_5y_start_date", "profit_cagr_5y_end_date",
+        "profit_cagr_5y_start_year", "profit_cagr_5y_end_year", "profit_cagr_5y_span_years", "profit_cv_5y", "financial_years_consecutive", "financial_metric_status", "current_pe", "current_pb",
         "pe_percentile_5y", "pb_percentile_5y", "sector_pe_percentile", "sector_pb_percentile", "china_10y_yield", "yield_spread_cn10y",
         "annual_vol_3y", "max_drawdown_3y", "npl_ratio", "provision_coverage", "core_tier1_ratio", "solvency_ratio",
-        "new_business_value_cagr_3y", "debt_to_assets", "interest_coverage", "fcf_dividend_coverage", "current_universe_only",
+        "new_business_value_cagr_3y", "new_business_value_cagr_3y_start_date", "new_business_value_cagr_3y_end_date",
+        "new_business_value_cagr_3y_start_year", "new_business_value_cagr_3y_end_year", "new_business_value_cagr_3y_span_years", "debt_to_assets", "interest_coverage", "fcf_dividend_coverage", "current_universe_only",
         "historical_backtest_allowed", "source_note", "source_errors",
     ]
     return snapshot.reindex(columns=columns).sort_values(["sector", "asset"]).reset_index(drop=True)
@@ -727,9 +908,11 @@ def _run_builder(
         try:
             raw, dataset_errors = fetch_asset_raw(asset, as_of, refresh=refresh)
             row = build_stock_row(watch, raw, china_10y, china_10y_date, as_of)
-            row["source_errors"] = json.dumps(dataset_errors, ensure_ascii=False, sort_keys=True) if dataset_errors else ""
+            metric_errors = str(row.get("source_errors", "")).strip()
+            dataset_error_text = json.dumps(dataset_errors, ensure_ascii=False, sort_keys=True) if dataset_errors else ""
+            row["source_errors"] = ";".join(filter(None, [metric_errors, dataset_error_text]))
             rows.append(row)
-            status, error = ("partial", row["source_errors"]) if dataset_errors else ("ok", "")
+            status, error = ("partial", row["source_errors"]) if row["source_errors"] else ("ok", "")
         except Exception as exc:  # noqa: BLE001
             status, error = "error", repr(exc)
         manifest.append(
@@ -764,6 +947,8 @@ def _run_builder(
     manifest_path = RAW_ROOT / "manifests" / f"stock_snapshot_{as_of.strftime('%Y%m%d')}.csv"
     _write_csv(manifest_frame, manifest_path)
     price_paths = [RAW_ROOT / "prices" / f"{asset}.csv" for asset in snapshot["asset"].astype(str)]
+    execution_price_paths = [RAW_ROOT / "execution_prices" / f"{asset}.csv" for asset in snapshot["asset"].astype(str)]
+    price_paths.extend(execution_price_paths)
     missing_prices = [path for path in price_paths if not path.is_file()]
     if missing_prices:
         raise RuntimeError(f"stock source manifest missing normalized prices: {missing_prices[:5]}")

@@ -388,8 +388,8 @@ def validate_config(config: dict[str, Any]) -> None:
     _config_float(entry, "stabilization_vol20_to_vol60_max", "entry", minimum=0.0, minimum_open=True)
     _config_float(entry, "range_efficiency_ratio_20d_max", "entry", minimum=0.0, maximum=1.0)
     raw_tranches = entry["tranche_fractions"]
-    if not isinstance(raw_tranches, list) or not raw_tranches:
-        raise ContractError("entry.tranche_fractions must be a non-empty list")
+    if not isinstance(raw_tranches, list) or len(raw_tranches) != 3:
+        raise ContractError("entry.tranche_fractions must contain exactly three stages")
     if any(isinstance(value, bool) for value in raw_tranches):
         raise ContractError("entry.tranche_fractions must contain finite numbers")
     try:
@@ -518,6 +518,7 @@ def validate_config(config: dict[str, Any]) -> None:
         {
             "snapshot_path",
             "price_directory",
+            "execution_price_directory",
             "account_path",
             "order_state_path",
             "trade_calendar_path",
@@ -531,6 +532,7 @@ def validate_config(config: dict[str, Any]) -> None:
     for key in (
         "snapshot_path",
         "price_directory",
+        "execution_price_directory",
         "account_path",
         "order_state_path",
         "trade_calendar_path",
@@ -1011,7 +1013,7 @@ def compute_price_features(prices: pd.DataFrame, config: dict[str, Any]) -> pd.D
         & (out["vol_ratio_20_60"] <= 1.20)
         & ((out["ma60"] / out["ma60"].shift(20) - 1.0).abs() <= 0.04)
     )
-    out["expected_reversion_edge"] = ((out["ma20"] - out["close"]) / out["close"]).clip(lower=0.0)
+    out["ma20_reversion_distance"] = ((out["ma20"] - out["close"]) / out["close"]).clip(lower=0.0)
     out["t_buy_setup"] = out["range_regime"] & (
         out["zscore20"] <= float(config["t_strategy"]["entry_zscore_20d_max"])
     )
@@ -1200,7 +1202,18 @@ def t_decision(
     asset_type = str(scored_asset["asset_type"]).lower()
     hurdle = round_trip_cost_rate(asset_type, config) + float(t_cfg["minimum_edge_after_cost"])
     if current_t_fraction <= EPS:
-        if _truth(latest_price["t_buy_setup"]) and _number(latest_price["expected_reversion_edge"]) >= hurdle:
+        new_distance = latest_price.get("ma20_reversion_distance", float("nan"))
+        legacy_distance = latest_price.get("expected_reversion_edge", float("nan"))
+        new_number = _number(new_distance)
+        legacy_number = _number(legacy_distance)
+        if math.isfinite(new_number) and math.isfinite(legacy_number) and not math.isclose(
+            new_number, legacy_number, rel_tol=0.0, abs_tol=1e-12
+        ):
+            raise ContractError(
+                "ma20_reversion_distance conflicts with legacy expected_reversion_edge"
+            )
+        reversion_distance = new_number if math.isfinite(new_number) else legacy_number
+        if _truth(latest_price["t_buy_setup"]) and _number(reversion_distance) >= hurdle:
             return {
                 "t_action": "BUY_T_NEXT_OPEN",
                 "target_t_fraction": float(t_cfg["t_sleeve_fraction_of_full_position"]),

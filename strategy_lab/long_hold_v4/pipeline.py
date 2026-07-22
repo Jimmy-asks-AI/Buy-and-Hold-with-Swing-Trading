@@ -35,6 +35,7 @@ from .run_artifacts import (
     canonical_sha256,
     configured_output_root,
 )
+from .price_contract import EXECUTABLE_PRICE_BASIS, require_executable_price_basis
 
 
 EXPECTED_AGENTS = {
@@ -53,6 +54,8 @@ PRICE_AUDIT_COLUMNS = [
     "asset",
     "latest_price_date",
     "latest_close",
+    "execution_price_date",
+    "execution_close",
     "price_drawdown_3y",
     "price_ma20",
     "price_ma60",
@@ -60,9 +63,10 @@ PRICE_AUDIT_COLUMNS = [
     "price_falling_knife",
     "price_range_regime",
     "price_zscore20",
-    "expected_reversion_edge",
+    "ma20_reversion_distance",
     "price_data_age_days",
     "price_fresh",
+    "execution_price_fresh",
 ]
 
 PROXY_COLUMNS = [
@@ -197,13 +201,42 @@ def _load_investable_prices(path: Path, asset: str) -> pd.DataFrame:
                 rename[candidate] = base
                 break
     prices = prices.rename(columns=rename)
-    if "return_basis" not in prices.columns:
-        raise ContractError(f"investable price file must declare return_basis: {path}")
+    required_basis = {"return_basis", "price_basis"}
+    missing_basis = sorted(required_basis.difference(prices.columns))
+    if missing_basis:
+        raise ContractError(f"investable price file missing basis columns {missing_basis}: {path}")
     bases = set(prices["return_basis"].astype(str).str.lower())
+    price_bases = set(prices["price_basis"].astype(str).str.lower())
     if not bases or not bases.issubset(INVESTABLE_RETURN_BASES):
         raise ContractError(f"non-investable return_basis for {asset}: {sorted(bases)}")
+    if price_bases != bases:
+        raise ContractError(f"investable return_basis and price_basis disagree for {asset}")
     prices["asset"] = str(asset)
     return prices
+
+
+def _load_executable_prices(path: Path, asset: str) -> pd.DataFrame:
+    prices = pd.read_csv(path, encoding="utf-8-sig", low_memory=False)
+    required = {"date", "open", "high", "low", "close", "return_basis", "price_basis"}
+    missing = sorted(required.difference(prices.columns))
+    if missing:
+        raise ContractError(f"executable price file missing columns for {asset}: {missing}")
+    bases = set(prices["return_basis"].astype(str).str.lower())
+    price_bases = set(prices["price_basis"].astype(str).str.lower())
+    if len(bases) != 1:
+        raise ContractError(f"executable price file must use one basis for {asset}")
+    require_executable_price_basis(next(iter(bases)), f"execution return_basis[{asset}]")
+    if price_bases != bases:
+        raise ContractError(f"execution return_basis and price_basis disagree for {asset}")
+    prices["asset"] = str(asset)
+    prices["date"] = pd.to_datetime(prices["date"], errors="coerce").dt.normalize()
+    for column in ["open", "high", "low", "close"]:
+        prices[column] = pd.to_numeric(prices[column], errors="coerce")
+    if prices[["date", "open", "high", "low", "close"]].isna().any().any():
+        raise ContractError(f"executable price file contains invalid rows for {asset}")
+    if (prices[["open", "high", "low", "close"]] <= 0).any().any() or prices["date"].duplicated().any():
+        raise ContractError(f"executable price file contains invalid prices or duplicate dates for {asset}")
+    return prices.sort_values("date")
 
 
 def _load_timing_proxy(path: Path, asset: str) -> pd.DataFrame:
@@ -513,12 +546,14 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
     trade_calendar_path = root / data_cfg["trade_calendar_path"]
     agent_contracts_path = root / data_cfg["agent_contracts_path"]
     price_dir = root / data_cfg["price_directory"]
+    execution_price_dir = root / data_cfg["execution_price_directory"]
     validate_agent_contracts(agent_contracts_path)
     account = load_account(account_path, config, as_of_ts)
 
     snapshot_ready = snapshot_path.exists()
     scored = pd.DataFrame()
     latest_prices: dict[str, float] = {}
+    latest_execution_dates: dict[str, pd.Timestamp] = {}
     feature_by_asset: dict[str, pd.Series] = {}
     feature_history_by_asset: dict[str, pd.DataFrame] = {}
     required_price_status: dict[str, bool] = {}
@@ -570,23 +605,26 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
                 required_price_status[asset] = False
                 price_gate_failures.append({"asset": asset, "reason": "account_snapshot_metadata_mismatch"})
             price_path = price_dir / f"{asset}.csv"
-            if not price_path.exists():
+            execution_price_path = execution_price_dir / f"{asset}.csv"
+            if not price_path.exists() or not execution_price_path.exists():
                 if price_required:
                     required_price_status[asset] = False
-                    price_gate_failures.append({"asset": asset, "reason": "missing_investable_price_file"})
+                    reason = "missing_investable_price_file" if not price_path.exists() else "missing_executable_price_file"
+                    price_gate_failures.append({"asset": asset, "reason": reason})
                 decision_rows.append(
                     {
                         "asset": asset,
                         "entry_action": "REVIEW_CORE" if current_core_fraction > 0 else "KEEP_CASH",
                         "target_core_fraction": current_core_fraction,
                         "t_enabled": False,
-                        "entry_reasons": "missing_investable_price_file",
+                        "entry_reasons": "missing_investable_or_executable_price_file",
                     }
                 )
                 continue
             try:
                 raw_prices = _load_investable_prices(price_path, asset)
                 features = compute_price_features(raw_prices, config)
+                executable_prices = _load_executable_prices(execution_price_path, asset)
             except (ContractError, OSError, UnicodeError, pd.errors.ParserError, pd.errors.EmptyDataError) as exc:
                 if price_required:
                     required_price_status[asset] = False
@@ -602,7 +640,8 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
                 )
                 continue
             features = features[features["date"] <= as_of_ts]
-            if features.empty:
+            executable_prices = executable_prices[executable_prices["date"] <= as_of_ts]
+            if features.empty or executable_prices.empty:
                 if price_required:
                     required_price_status[asset] = False
                     price_gate_failures.append({"asset": asset, "reason": "no_price_rows_on_or_before_as_of"})
@@ -612,15 +651,20 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
                         "entry_action": "REVIEW_CORE" if current_core_fraction > 0 else "KEEP_CASH",
                         "target_core_fraction": current_core_fraction,
                         "t_enabled": False,
-                        "entry_reasons": "no_price_rows_on_or_before_as_of",
+                        "entry_reasons": "no_research_or_executable_price_rows_on_or_before_as_of",
                     }
                 )
                 continue
             latest = features.iloc[-1]
-            latest_prices[asset] = float(latest["close"])
+            latest_execution = executable_prices.iloc[-1]
+            latest_prices[asset] = float(latest_execution["close"])
+            latest_execution_dates[asset] = pd.Timestamp(latest_execution["date"]).normalize()
             feature_by_asset[asset] = latest
             feature_history_by_asset[asset] = features
             fresh = 0 <= (as_of_ts - pd.Timestamp(latest["date"]).normalize()).days <= int(
+                config["model"]["max_price_age_days"]
+            )
+            execution_fresh = 0 <= (as_of_ts - pd.Timestamp(latest_execution["date"]).normalize()).days <= int(
                 config["model"]["max_price_age_days"]
             )
             price_audit_rows.append(
@@ -628,6 +672,8 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
                     "asset": asset,
                     "latest_price_date": latest["date"],
                     "latest_close": latest["close"],
+                    "execution_price_date": latest_execution["date"],
+                    "execution_close": latest_execution["close"],
                     "price_drawdown_3y": latest["drawdown_3y"],
                     "price_ma20": latest["ma20"],
                     "price_ma60": latest["ma60"],
@@ -635,16 +681,18 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
                     "price_falling_knife": bool(latest["falling_knife"]),
                     "price_range_regime": bool(latest["range_regime"]),
                     "price_zscore20": latest["zscore20"],
-                    "expected_reversion_edge": latest["expected_reversion_edge"],
+                    "ma20_reversion_distance": latest["ma20_reversion_distance"],
                     "price_data_age_days": int((as_of_ts - pd.Timestamp(latest["date"]).normalize()).days),
                     "price_fresh": fresh,
+                    "execution_price_fresh": execution_fresh,
                 }
             )
             if price_required:
-                required_price_status[asset] = bool(required_price_status.get(asset, True) and fresh)
-                if not fresh:
-                    price_gate_failures.append({"asset": asset, "reason": "stale_investable_price"})
-            input_paths.append(price_path)
+                required_price_status[asset] = bool(required_price_status.get(asset, True) and fresh and execution_fresh)
+                if not fresh or not execution_fresh:
+                    reason = "stale_investable_price" if not fresh else "stale_executable_price"
+                    price_gate_failures.append({"asset": asset, "reason": reason})
+            input_paths.extend([price_path, execution_price_path])
             decision_rows.append(
                 {"asset": asset, **entry_decision(row, latest, current_core_fraction, as_of_ts, config)}
             )
@@ -887,6 +935,12 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
     }
 
     target_columns = [
+        "target_schema_version",
+        "target_semantics",
+        "signal_date",
+        "snapshot_asset_count",
+        "available_date",
+        "historical_backtest_allowed",
         "asset",
         "asset_type",
         "sector",
@@ -897,9 +951,30 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
         "target_cash_weight",
         "t_action",
         "target_t_fraction",
+        "target_t_weight",
         "manual_risk_review_required",
     ]
+    scored["target_schema_version"] = 2
+    scored["target_semantics"] = "FULL_SNAPSHOT"
+    scored["signal_date"] = str(as_of_ts.date())
+    scored["snapshot_asset_count"] = len(scored)
+    scored["target_t_weight"] = (
+        pd.to_numeric(scored.get("full_target_weight", pd.Series(0.0, index=scored.index)), errors="coerce").fillna(0.0)
+        * pd.to_numeric(scored.get("target_t_fraction", pd.Series(0.0, index=scored.index)), errors="coerce").fillna(0.0)
+    )
     targets = scored.reindex(columns=target_columns)
+    execution_valuation = pd.DataFrame(
+        [
+            {
+                "asset": asset,
+                "price": latest_prices[asset],
+                "as_of_date": latest_execution_dates[asset].date().isoformat(),
+                "price_basis": EXECUTABLE_PRICE_BASIS,
+            }
+            for asset in sorted(latest_prices)
+        ],
+        columns=["asset", "price", "as_of_date", "price_basis"],
+    )
     input_entries = [
         {
             "path": str(path.relative_to(root)).replace("\\", "/"),
@@ -951,8 +1026,9 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
         raise AssertionError("sealing the run manifest changed the order plan")
     publisher.write_json("readiness.json", readiness, schema_version=1)
     publisher.write_json("account_summary.json", account_report, schema_version=1)
-    publisher.write_csv("candidate_decisions.csv", scored, schema_version=1)
-    publisher.write_csv("target_weights.csv", targets, schema_version=1)
+    publisher.write_csv("candidate_decisions.csv", scored, schema_version=2)
+    publisher.write_csv("target_weights.csv", targets, schema_version=2)
+    publisher.write_csv("execution_valuation_prices.csv", execution_valuation, schema_version=2)
     publisher.write_csv("order_intents.csv", final_orders, schema_version=1)
     publisher.write_csv("timing_proxy_latest.csv", proxies, schema_version=1)
     publisher.write_csv("timing_proxy_historical_setups.csv", setups, schema_version=1)
@@ -963,6 +1039,7 @@ def run_current(root: Path, config: dict[str, Any], as_of: str | pd.Timestamp) -
         "account": published["run"] / "account_summary.json",
         "candidates": published["run"] / "candidate_decisions.csv",
         "targets": published["run"] / "target_weights.csv",
+        "execution_valuation": published["run"] / "execution_valuation_prices.csv",
         "orders": published["run"] / "order_intents.csv",
         "proxies": published["run"] / "timing_proxy_latest.csv",
         "setups": published["run"] / "timing_proxy_historical_setups.csv",

@@ -28,7 +28,9 @@ from strategy_lab.long_hold_v4.core import (
 from strategy_lab.long_hold_v4.stock_snapshot_builder import (
     _annual_financials,
     _dividend_metrics,
+    _financial_window_ready,
     _valuation_metrics,
+    _window_cagr,
     current_valuation_metrics_from_observation,
     finalize_snapshot,
 )
@@ -41,9 +43,31 @@ from strategy_lab.long_hold_v4.run_artifacts import verify_run
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def formal_prices(frame: pd.DataFrame, *, suspended: set[tuple[str, str]] | None = None) -> pd.DataFrame:
+    out = frame.copy()
+    out["date"] = pd.to_datetime(out["date"]).dt.strftime("%Y-%m-%d")
+    out["list_date"] = "2000-01-01"
+    out["delist_date"] = pd.NaT
+    out["price_basis"] = out["return_basis"]
+    suspended = suspended or set()
+    out["is_tradable"] = [
+        (str(row.asset), str(row.date)) not in suspended for row in out.itertuples(index=False)
+    ]
+    return out
+
+
+def target_contract(frame: pd.DataFrame, semantics: str = "FULL_SNAPSHOT") -> pd.DataFrame:
+    out = frame.copy()
+    out["target_semantics"] = semantics
+    out["target_schema_version"] = 2
+    out["snapshot_asset_count"] = out.groupby("signal_date")["asset"].transform("count")
+    return out
+
+
 def prepare_runtime_state(root: Path, config: dict) -> None:
     config["data"].setdefault("order_state_path", "order_state.json")
     config["data"].setdefault("trade_calendar_path", "trade_calendar.csv")
+    config["data"].setdefault("execution_price_directory", "execution_prices")
     account_path = root / config["data"]["account_path"]
     if not account_path.exists():
         account_path.parent.mkdir(parents=True, exist_ok=True)
@@ -56,6 +80,18 @@ def prepare_runtime_state(root: Path, config: dict) -> None:
     pd.DataFrame({"date": pd.bdate_range("2026-01-01", "2026-07-31")}).to_csv(
         calendar_path, index=False, encoding="utf-8-sig"
     )
+    price_dir = root / config["data"]["price_directory"]
+    execution_dir = root / config["data"]["execution_price_directory"]
+    execution_dir.mkdir(parents=True, exist_ok=True)
+    if price_dir.exists():
+        for price_path in price_dir.glob("*.csv"):
+            frame = pd.read_csv(price_path, encoding="utf-8-sig")
+            frame["price_basis"] = frame["return_basis"]
+            frame.to_csv(price_path, index=False, encoding="utf-8-sig")
+            executable = frame.copy()
+            executable["return_basis"] = "unadjusted_executable"
+            executable["price_basis"] = "unadjusted_executable"
+            executable.to_csv(execution_dir / price_path.name, index=False, encoding="utf-8-sig")
 
 
 def bank_row(**overrides):
@@ -109,7 +145,7 @@ def latest_price(**overrides):
         "range_regime": True,
         "t_buy_setup": True,
         "t_exit_setup": False,
-        "expected_reversion_edge": 0.012,
+        "ma20_reversion_distance": 0.012,
     }
     row.update(overrides)
     return pd.Series(row)
@@ -139,6 +175,26 @@ class LongHoldV4Tests(unittest.TestCase):
                 mutate(invalid)
                 with self.assertRaisesRegex(ContractError, message):
                     validate_config(invalid)
+
+    def test_config_requires_exactly_three_cumulative_tranches(self):
+        for fractions in ([1.0], [0.5, 1.0], [0.2, 0.5, 0.8, 1.0]):
+            with self.subTest(fractions=fractions):
+                invalid = copy.deepcopy(self.config)
+                invalid["entry"]["tranche_fractions"] = fractions
+                with self.assertRaisesRegex(ContractError, "exactly three"):
+                    validate_config(invalid)
+        valid = copy.deepcopy(self.config)
+        valid["entry"]["tranche_fractions"] = [0.3, 0.6, 1.0]
+        validate_config(valid)
+
+    def test_legacy_reversion_field_migrates_but_conflicts_fail(self):
+        legacy = latest_price()
+        legacy["expected_reversion_edge"] = legacy.pop("ma20_reversion_distance")
+        decision = t_decision(score_universe(pd.DataFrame([bank_row()]), "2026-07-17", self.config).iloc[0], legacy, 0.8, 0.0, 0, "2026-07-17", self.config)
+        self.assertEqual(decision["t_action"], "BUY_T_NEXT_OPEN")
+        conflict = latest_price(expected_reversion_edge=0.99)
+        with self.assertRaisesRegex(ContractError, "conflicts"):
+            t_decision(score_universe(pd.DataFrame([bank_row()]), "2026-07-17", self.config).iloc[0], conflict, 0.8, 0.0, 0, "2026-07-17", self.config)
 
     def test_performance_evidence_registry_never_promotes_unvalidated_legacy_results(self):
         registry = pd.read_csv(ROOT / "data_catalog" / "performance_evidence_registry.csv")
@@ -456,62 +512,217 @@ class LongHoldV4Tests(unittest.TestCase):
         config["portfolio"]["max_single_stock_weight"] = 0.50
         for key in ["stock_commission_rate", "etf_commission_rate", "stock_sell_stamp_duty_rate", "stock_transfer_fee_rate", "etf_stamp_duty_rate", "slippage_bps_each_side"]:
             config["costs"][key] = 0.0
-        prices = pd.DataFrame(
+        prices = formal_prices(pd.DataFrame(
             [
                 ("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
                 ("2026-01-06", "AAA", "stock", 10.0, 11.0, "qfq_adjusted"),
                 ("2026-01-07", "AAA", "stock", 11.0, 11.0, "qfq_adjusted"),
             ],
             columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
-        )
-        targets = pd.DataFrame(
+        ))
+        targets = target_contract(pd.DataFrame(
             [("2026-01-05", "AAA", 0.50, 0.0)],
             columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
-        )
+        ))
         result = run_weight_backtest(prices, targets, config, initial_cash=100.0)
         self.assertAlmostEqual(result["nav"].iloc[0]["nav"], 100.0)
         self.assertAlmostEqual(result["nav"].iloc[1]["nav"], 105.0)
         self.assertEqual(pd.Timestamp(result["trades"].iloc[0]["execution_date"]), pd.Timestamp("2026-01-06"))
 
+    def test_high_buy_cost_preserves_minimum_post_trade_cash_weight(self):
+        config = copy.deepcopy(self.config)
+        config["portfolio"].update({"minimum_cash_weight": 0.20, "max_single_stock_weight": 0.90, "target_core_exposure": 0.90})
+        config["costs"].update(
+            {
+                "stock_commission_rate": 0.50,
+                "minimum_commission_cny": 0.0,
+                "stock_transfer_fee_rate": 0.0,
+                "stock_sell_stamp_duty_rate": 0.0,
+                "slippage_bps_each_side": 0.0,
+            }
+        )
+        prices = formal_prices(pd.DataFrame(
+            [
+                ("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+                ("2026-01-06", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+            ],
+            columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
+        ))
+        targets = target_contract(pd.DataFrame(
+            [("2026-01-05", "AAA", 0.80, 0.0)],
+            columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
+        ))
+        result = run_weight_backtest(prices, targets, config, initial_cash=100.0)
+        traded = result["nav"].loc[result["nav"]["trade_notional"] > 0].iloc[0]
+        self.assertGreaterEqual(traded["post_trade_cash_weight"] + 1e-9, 0.20)
+        self.assertGreater(traded["trading_cost"], 0.0)
+
+    def test_full_snapshot_contract_rejects_sparse_omission_and_bad_count(self):
+        prices = formal_prices(pd.DataFrame(
+            [
+                (date, asset, "stock", 10.0, 10.0, "qfq_adjusted")
+                for date in ["2026-01-05", "2026-01-06", "2026-01-07"]
+                for asset in ["AAA", "BBB"]
+            ],
+            columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
+        ))
+        sparse = target_contract(pd.DataFrame(
+            [
+                ("2026-01-04", "AAA", 0.10, 0.0),
+                ("2026-01-05", "BBB", 0.10, 0.0),
+            ],
+            columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
+        ))
+        with self.assertRaisesRegex(ContractError, "explicit zero targets"):
+            validate_backtest_inputs(prices, sparse, self.config, formal_backtest=True)
+        bad_count = target_contract(sparse.iloc[[0]].drop(columns=["target_semantics", "target_schema_version", "snapshot_asset_count"]))
+        bad_count["snapshot_asset_count"] = 2
+        with self.assertRaisesRegex(ContractError, "row count"):
+            validate_backtest_inputs(prices, bad_count, self.config, formal_backtest=True)
+
+    def test_formal_backtest_rejects_delta_and_diagnostic_requires_opt_in(self):
+        prices = formal_prices(pd.DataFrame(
+            [
+                ("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+                ("2026-01-06", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+            ],
+            columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
+        ))
+        delta = target_contract(pd.DataFrame(
+            [("2026-01-05", "AAA", 0.10, 0.0)],
+            columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
+        ), semantics="DELTA")
+        with self.assertRaisesRegex(ContractError, "FULL_SNAPSHOT"):
+            run_weight_backtest(prices, delta, self.config, initial_cash=100.0)
+        with self.assertRaisesRegex(ContractError, "allow_delta_targets"):
+            run_weight_backtest(prices, delta, self.config, initial_cash=100.0, mode="diagnostic")
+        result = run_weight_backtest(
+            prices, delta, self.config, initial_cash=100.0, mode="diagnostic", allow_delta_targets=True
+        )
+        self.assertEqual(result["metrics"]["target_semantics"], "DELTA")
+
+    def test_existing_holdings_count_toward_maximum_assets(self):
+        config = copy.deepcopy(self.config)
+        config["universe"]["maximum_assets"] = 1
+        prices = formal_prices(pd.DataFrame(
+            [
+                (date, asset, "stock", 10.0, 10.0, "qfq_adjusted")
+                for date in ["2026-01-05", "2026-01-06", "2026-01-07"]
+                for asset in ["AAA", "BBB"]
+            ],
+            columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
+        ))
+        full = target_contract(pd.DataFrame(
+            [("2026-01-04", "AAA", 0.10, 0.0)],
+            columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
+        ))
+        delta = target_contract(pd.DataFrame(
+            [("2026-01-05", "BBB", 0.10, 0.0)],
+            columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
+        ), semantics="DELTA")
+        with self.assertRaisesRegex(ContractError, "including existing holdings"):
+            run_weight_backtest(
+                prices,
+                pd.concat([full, delta], ignore_index=True),
+                config,
+                initial_cash=100.0,
+                mode="diagnostic",
+                allow_delta_targets=True,
+            )
+
+    def test_asset_level_calendar_waits_for_own_next_tradable_session(self):
+        prices = formal_prices(
+            pd.DataFrame(
+                [
+                    ("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+                    ("2026-01-06", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+                    ("2026-01-07", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+                    ("2026-01-05", "BBB", "stock", 10.0, 10.0, "qfq_adjusted"),
+                    ("2026-01-06", "BBB", "stock", 10.0, 10.0, "qfq_adjusted"),
+                ],
+                columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
+            ),
+            suspended={("AAA", "2026-01-06")},
+        )
+        targets = target_contract(pd.DataFrame(
+            [("2026-01-05", "AAA", 0.10, 0.0), ("2026-01-05", "BBB", 0.10, 0.0)],
+            columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
+        ))
+        result = run_weight_backtest(prices, targets, self.config, initial_cash=100.0)
+        execution = result["trades"].groupby("asset")["execution_date"].first()
+        self.assertEqual(pd.Timestamp(execution["BBB"]), pd.Timestamp("2026-01-06"))
+        self.assertEqual(pd.Timestamp(execution["AAA"]), pd.Timestamp("2026-01-07"))
+
+    def test_listing_delisting_and_held_delisting_are_hard_failures(self):
+        base = formal_prices(pd.DataFrame(
+            [
+                ("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+                ("2026-01-06", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+                ("2026-01-07", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
+            ],
+            columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
+        ))
+        before_listing = base.copy()
+        before_listing["list_date"] = "2026-01-06"
+        before_listing = before_listing[before_listing["date"] >= "2026-01-06"]
+        target = target_contract(pd.DataFrame(
+            [("2026-01-05", "AAA", 0.10, 0.0)],
+            columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
+        ))
+        with self.assertRaisesRegex(ContractError, "predates asset listing"):
+            run_weight_backtest(before_listing, target, self.config, initial_cash=100.0)
+
+        after_delisting = base.copy()
+        after_delisting["delist_date"] = "2026-01-06"
+        after_delisting = after_delisting[after_delisting["date"] <= "2026-01-06"]
+        with self.assertRaisesRegex(ContractError, "on or after asset delisting"):
+            run_weight_backtest(after_delisting, target.assign(signal_date="2026-01-06"), self.config, initial_cash=100.0)
+
+        crossing = base.copy()
+        crossing["delist_date"] = "2026-01-07"
+        crossing.loc[crossing["date"].eq("2026-01-07"), "is_tradable"] = False
+        with self.assertRaisesRegex(ContractError, "reaches delisting"):
+            run_weight_backtest(crossing, target, self.config, initial_cash=100.0)
+
     def test_backtest_rejects_single_asset_cap_violation(self):
-        prices = pd.DataFrame(
+        prices = formal_prices(pd.DataFrame(
             [("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted")],
             columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
-        )
-        targets = pd.DataFrame(
+        ))
+        targets = target_contract(pd.DataFrame(
             [("2026-01-04", "AAA", 0.90, 0.0)],
             columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
-        )
+        ))
         with self.assertRaisesRegex(ContractError, "single-asset cap"):
             validate_backtest_inputs(prices, targets, self.config)
 
-    def test_backtest_rejects_missing_price_while_asset_is_held(self):
+    def test_backtest_carries_last_valuation_while_asset_is_suspended(self):
         config = copy.deepcopy(self.config)
         config["portfolio"]["max_single_stock_weight"] = 0.50
-        prices = pd.DataFrame(
+        prices = formal_prices(pd.DataFrame(
             [
                 ("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
                 ("2026-01-06", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
                 ("2026-01-07", "BBB", "stock", 20.0, 20.0, "qfq_adjusted"),
             ],
             columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
-        )
-        targets = pd.DataFrame(
+        ))
+        targets = target_contract(pd.DataFrame(
             [("2026-01-05", "AAA", 0.10, 0.0)],
             columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
-        )
-        with self.assertRaisesRegex(ContractError, "held assets missing"):
-            run_weight_backtest(prices, targets, config, initial_cash=100.0)
+        ))
+        result = run_weight_backtest(prices, targets, config, initial_cash=100.0)
+        self.assertAlmostEqual(result["nav"].iloc[-1]["nav"], result["nav"].iloc[-2]["nav"])
 
     def test_backtest_input_contract_does_not_self_promote(self):
-        prices = pd.DataFrame(
+        prices = formal_prices(pd.DataFrame(
             [
                 ("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted"),
                 ("2026-01-06", "AAA", "stock", 10.0, 10.1, "qfq_adjusted"),
             ],
             columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
-        )
-        targets = pd.DataFrame(
+        ))
+        targets = target_contract(pd.DataFrame(
             [
                 {
                     "signal_date": "2026-01-05",
@@ -523,7 +734,7 @@ class LongHoldV4Tests(unittest.TestCase):
                     "target_t_weight": 0.0,
                 }
             ]
-        )
+        ))
         result = run_weight_backtest(prices, targets, self.config, initial_cash=100.0)
         self.assertTrue(result["metrics"]["input_contract_ready"])
         self.assertFalse(result["metrics"]["promotion_allowed"])
@@ -537,41 +748,42 @@ class LongHoldV4Tests(unittest.TestCase):
             ],
             columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
         )
-        targets = pd.DataFrame(
+        prices["price_basis"] = prices["return_basis"]
+        targets = target_contract(pd.DataFrame(
             [("2026-01-05", "IDX", 0.20, 0.0)],
             columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
-        )
-        result = run_weight_backtest(prices, targets, self.config, initial_cash=100.0)
+        ))
+        result = run_weight_backtest(prices, targets, self.config, initial_cash=100.0, mode="diagnostic")
         self.assertFalse(result["metrics"]["promotion_allowed"])
 
     def test_overweight_targets_are_rejected(self):
-        prices = pd.DataFrame(
+        prices = formal_prices(pd.DataFrame(
             [("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted")],
             columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
-        )
-        targets = pd.DataFrame(
+        ))
+        targets = target_contract(pd.DataFrame(
             [("2026-01-04", "AAA", 0.90, 0.20)],
             columns=["signal_date", "asset", "target_core_weight", "target_t_weight"],
-        )
+        ))
         with self.assertRaises(ContractError):
             validate_backtest_inputs(prices, targets)
 
     def test_backtest_rejects_combined_asset_cap_and_orphan_t_target(self):
-        prices = pd.DataFrame(
+        prices = formal_prices(pd.DataFrame(
             [("2026-01-05", "AAA", "stock", 10.0, 10.0, "qfq_adjusted")],
             columns=["date", "asset", "asset_type", "open", "close", "return_basis"],
-        )
-        combined_breach = pd.DataFrame(
+        ))
+        combined_breach = target_contract(pd.DataFrame(
             [("2026-01-04", "AAA", "bank", 0.11, 0.02)],
             columns=["signal_date", "asset", "sector", "target_core_weight", "target_t_weight"],
-        )
+        ))
         with self.assertRaisesRegex(ContractError, "combined core and T"):
             validate_backtest_inputs(prices, combined_breach, self.config)
 
-        orphan_t = pd.DataFrame(
+        orphan_t = target_contract(pd.DataFrame(
             [("2026-01-04", "AAA", "bank", 0.0, 0.02)],
             columns=["signal_date", "asset", "sector", "target_core_weight", "target_t_weight"],
-        )
+        ))
         with self.assertRaisesRegex(ContractError, "requires an established core"):
             validate_backtest_inputs(prices, orphan_t, self.config)
 
@@ -601,6 +813,8 @@ class LongHoldV4Tests(unittest.TestCase):
             ).to_csv(root / "prices" / "600000.csv", index=False, encoding="utf-8-sig")
             prepare_runtime_state(root, config)
             paths = run_current(root, config, "2026-07-17")
+            execution_valuation = pd.read_csv(paths["execution_valuation"], encoding="utf-8-sig")
+            self.assertEqual(set(execution_valuation["price_basis"]), {"unadjusted_executable"})
             verified_run = verify_run(root, root / "outputs", code_root=ROOT)
             self.assertEqual(verified_run["run_id"], json.loads(paths["manifest"].read_text(encoding="utf-8"))["run_id"])
             readiness = json.loads(paths["readiness"].read_text(encoding="utf-8"))
@@ -888,10 +1102,74 @@ class LongHoldV4Tests(unittest.TestCase):
                 {"实施方案公告日期": "2025-07-04", "派息比例": 18.0, "派息日": "2025-07-10", "报告时间": "2024年报"},
             ]
         )
-        metrics = _dividend_metrics(data, [2024, 2025], pd.Timestamp("2026-07-17"))
+        metrics = _dividend_metrics(data, [2020, 2021, 2022, 2023, 2024, 2025], pd.Timestamp("2026-07-17"))
         self.assertEqual(metrics["dividend_years_5y"], 2)
         self.assertAlmostEqual(metrics["latest_fiscal_dps"], 2.0)
         self.assertAlmostEqual(metrics["trailing_12m_dps"], 2.0)
+
+    def test_cagr_requires_six_endpoints_for_five_years_and_four_for_three_years(self):
+        five_year = _window_cagr(
+            pd.Series([100, 105, 110, 116, 122, 130]),
+            pd.Series(pd.to_datetime([f"{year}-12-31" for year in range(2020, 2026)])),
+            6,
+        )
+        self.assertTrue(pd.notna(five_year["value"]))
+        self.assertEqual(five_year["start_date"], pd.Timestamp("2020-12-31"))
+        self.assertEqual(five_year["end_date"], pd.Timestamp("2025-12-31"))
+        self.assertEqual(five_year["start_year"], 2020)
+        self.assertEqual(five_year["end_year"], 2025)
+        self.assertGreater(five_year["span_years"], 4.99)
+        blocked_five_year = _window_cagr(
+            pd.Series([100, 105, 110, 116, 122]),
+            pd.Series(pd.to_datetime([f"{year}-12-31" for year in range(2021, 2026)])),
+            6,
+        )
+        self.assertTrue(pd.isna(blocked_five_year["value"]))
+
+        three_year = _window_cagr(
+            pd.Series([100, 110, 120, 133]),
+            pd.Series(pd.to_datetime([f"{year}-12-31" for year in range(2022, 2026)])),
+            4,
+        )
+        self.assertTrue(pd.notna(three_year["value"]))
+        blocked_three_year = _window_cagr(
+            pd.Series([100, 110, 120]),
+            pd.Series(pd.to_datetime([f"{year}-12-31" for year in range(2023, 2026)])),
+            4,
+        )
+        self.assertTrue(pd.isna(blocked_three_year["value"]))
+
+    def test_missing_duplicate_and_out_of_order_fiscal_years_block_metrics(self):
+        missing = _window_cagr(
+            pd.Series([100, 110, 120, 130, 140, 150]),
+            pd.Series(pd.to_datetime(["2019-12-31", "2020-12-31", "2022-12-31", "2023-12-31", "2024-12-31", "2025-12-31"])),
+            6,
+        )
+        duplicate = _window_cagr(
+            pd.Series([100, 110, 120, 130, 140, 150]),
+            pd.Series(pd.to_datetime(["2020-12-31", "2021-12-31", "2021-12-31", "2023-12-31", "2024-12-31", "2025-12-31"])),
+            6,
+        )
+        out_of_order = _window_cagr(
+            pd.Series([100, 110, 120, 130, 140, 150]),
+            pd.Series(pd.to_datetime(["2020-12-31", "2022-12-31", "2021-12-31", "2023-12-31", "2024-12-31", "2025-12-31"])),
+            6,
+        )
+        self.assertTrue(pd.isna(missing["value"]))
+        self.assertTrue(pd.isna(duplicate["value"]))
+        self.assertTrue(pd.isna(out_of_order["value"]))
+
+        annual = _annual_financials(
+            pd.DataFrame(
+                [
+                    {"REPORT_DATE": "2024-12-31", "REPORT_DATE_NAME": "2024年报", "NOTICE_DATE": "2025-03-01"},
+                    {"REPORT_DATE": "2024-12-31", "REPORT_DATE_NAME": "2024年报修订", "NOTICE_DATE": "2025-04-01"},
+                ]
+            ),
+            pd.Timestamp("2026-01-01"),
+        )
+        self.assertFalse(_financial_window_ready(annual, 6))
+        self.assertEqual(annual.attrs["duplicate_fiscal_years"], [2024])
 
     def test_valuation_metrics_do_not_replace_current_loss_with_stale_positive_pe(self):
         data = pd.DataFrame(

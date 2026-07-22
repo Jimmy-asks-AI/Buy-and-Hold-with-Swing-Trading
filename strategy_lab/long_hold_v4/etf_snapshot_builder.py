@@ -258,6 +258,27 @@ def fetch_price(asset: str) -> pd.DataFrame:
     return out.sort_values("date").reset_index(drop=True)
 
 
+def unadjusted_execution_prices(raw_prices: pd.DataFrame, asset: str, as_of: pd.Timestamp) -> pd.DataFrame:
+    prices = raw_prices.copy()
+    prices["date"] = pd.to_datetime(prices["date"], errors="coerce").dt.normalize()
+    numeric = ["open", "high", "low", "close", "volume", "amount"]
+    for column in numeric:
+        prices[column] = pd.to_numeric(prices[column], errors="coerce")
+    prices = prices[(prices["date"] <= as_of) & prices[numeric].notna().all(axis=1)].copy()
+    prices = prices.sort_values("date").drop_duplicates("date", keep="last")
+    if prices.empty or (prices[["open", "high", "low", "close"]] <= 0).any().any():
+        raise ValueError(f"invalid unadjusted ETF execution prices for {asset}")
+    out = prices[["date", *numeric]].copy()
+    out["asset"] = asset
+    out["asset_type"] = "etf"
+    out["return_basis"] = "unadjusted_executable"
+    out["price_basis"] = "unadjusted_executable"
+    out["available_date"] = out["date"]
+    out["data_source"] = "akshare.fund_etf_hist_sina.unadjusted"
+    out["date"] = out["date"].dt.strftime("%Y-%m-%d")
+    return out
+
+
 def fetch_index_history(code: str, as_of: pd.Timestamp) -> pd.DataFrame:
     ak = _akshare()
     raw = _without_proxy(
@@ -472,6 +493,7 @@ def total_return_adjusted_prices(
     out["asset"] = asset
     out["asset_type"] = "etf"
     out["return_basis"] = "total_return"
+    out["price_basis"] = "total_return"
     out["available_date"] = out["date"]
     out["data_source"] = "sina ETF OHLC + sina cumulative distributions"
     out["date"] = out["date"].dt.strftime("%Y-%m-%d")
@@ -731,6 +753,7 @@ def _run_builder(as_of: pd.Timestamp, max_assets: int, refresh: bool, sleep_seco
                     index_cache[cache_key] = _index_data(mapping, as_of, raw, refresh)
                 index_data = index_cache[cache_key]
                 adjusted = total_return_adjusted_prices(asset_data["price"], asset_data["dividend"], asset, as_of)
+                executable = unadjusted_execution_prices(asset_data["price"], asset, as_of)
                 row = build_etf_row(
                     candidate,
                     profile,
@@ -744,6 +767,7 @@ def _run_builder(as_of: pd.Timestamp, max_assets: int, refresh: bool, sleep_seco
                     as_of,
                 )
                 _write_csv(adjusted, RAW_ROOT / "prices" / f"{asset}.csv")
+                _write_csv(executable, RAW_ROOT / "execution_prices" / f"{asset}.csv")
                 rows.append(row)
                 status = "ok"
         except Exception as exc:  # noqa: BLE001
@@ -785,6 +809,7 @@ def _run_builder(as_of: pd.Timestamp, max_assets: int, refresh: bool, sleep_seco
     manifest_path = RAW_ROOT / "manifests" / f"etf_snapshot_{as_of.strftime('%Y%m%d')}.csv"
     _write_csv(manifest_frame, manifest_path)
     normalized_prices = [RAW_ROOT / "prices" / f"{row['asset']}.csv" for row in rows]
+    normalized_prices.extend(RAW_ROOT / "execution_prices" / f"{row['asset']}.csv" for row in rows)
     source_paths = sorted(
         set(raw.rglob("*.csv"))
         | {WATCHLIST_PATH, ETF_SNAPSHOT_PATH, INDEX_REGISTRY_PATH, manifest_path, *normalized_prices}

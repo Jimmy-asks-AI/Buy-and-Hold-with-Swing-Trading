@@ -200,7 +200,7 @@ def run_historical_diagnostic(
                         "price_falling_knife": bool(latest["falling_knife"]),
                         "price_range_regime": bool(latest["range_regime"]),
                         "price_zscore20": latest["zscore20"],
-                        "expected_reversion_edge": latest["expected_reversion_edge"],
+                        "ma20_reversion_distance": latest["ma20_reversion_distance"],
                         "technical_t_buy_setup": bool(latest["t_buy_setup"]),
                         "technical_t_exit_setup": bool(latest["t_exit_setup"]),
                         "t_buy_setup_if_core_established": bool(scored_row["durable_eligible"])

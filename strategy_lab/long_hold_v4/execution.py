@@ -30,6 +30,7 @@ from .order_envelope import (
 )
 from .recoverable_transaction import commit_write_set, recover_pending_write_set
 from .run_artifacts import configured_output_root, resolve_current_run, verify_run
+from .price_contract import require_executable_price_basis
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -988,18 +989,21 @@ def _load_execution_prices(
     path: Path, fill_date: pd.Timestamp, config: dict[str, Any]
 ) -> tuple[dict[str, float], pd.Timestamp]:
     frame = pd.read_csv(path, encoding="utf-8-sig", dtype={"asset": str})
-    required = {"asset", "price", "as_of_date"}
+    required = {"asset", "price", "as_of_date", "price_basis"}
     if not required.issubset(frame.columns):
         raise ContractError(f"execution valuation snapshot missing columns: {sorted(required.difference(frame.columns))}")
     dates = pd.to_datetime(frame["as_of_date"], errors="coerce").dt.normalize()
-    if dates.isna().any() or dates.nunique() != 1:
-        raise ContractError("execution valuation snapshot must have one valid as_of date")
-    price_date = pd.Timestamp(dates.iloc[0]).normalize()
-    age = int((fill_date.normalize() - price_date).days)
-    if age < 0 or age > int(config["model"]["max_price_age_days"]):
+    if dates.isna().any():
+        raise ContractError("execution valuation snapshot contains an invalid as_of date")
+    ages = (fill_date.normalize() - dates).dt.days
+    if (ages < 0).any() or (ages > int(config["model"]["max_price_age_days"])).any():
         raise ContractError("execution valuation snapshot is stale or later than the fill date")
+    price_date = pd.Timestamp(dates.min()).normalize()
     if frame["asset"].astype(str).str.zfill(6).duplicated().any():
         raise ContractError("execution valuation snapshot contains duplicate assets")
+    bases = frame["price_basis"].map(lambda value: require_executable_price_basis(value, "execution price_basis"))
+    if bases.nunique() != 1:
+        raise ContractError("execution valuation snapshot must use one executable price basis")
     return (
         {
             _asset_code(row["asset"]): _nonnegative_number(row["price"], f"valuation price[{row['asset']}]")
