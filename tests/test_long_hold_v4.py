@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import tempfile
 import unittest
@@ -32,9 +33,28 @@ from strategy_lab.long_hold_v4.stock_snapshot_builder import (
     finalize_snapshot,
 )
 from strategy_lab.long_hold_v4.pipeline import load_snapshot, plan_orders, run_current
+from strategy_lab.long_hold_v4.execution import normalize_account
+from strategy_lab.long_hold_v4.order_envelope import normalize_order_state_book, verify_order_frame
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def prepare_runtime_state(root: Path, config: dict) -> None:
+    config["data"].setdefault("order_state_path", "order_state.json")
+    config["data"].setdefault("trade_calendar_path", "trade_calendar.csv")
+    account_path = root / config["data"]["account_path"]
+    if not account_path.exists():
+        account_path.parent.mkdir(parents=True, exist_ok=True)
+        account_path.write_text(
+            json.dumps({"as_of_date": "2026-07-17", "cash_cny": 500000.0, "holdings": []}),
+            encoding="utf-8",
+        )
+    calendar_path = root / config["data"]["trade_calendar_path"]
+    calendar_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame({"date": pd.bdate_range("2026-01-01", "2026-07-31")}).to_csv(
+        calendar_path, index=False, encoding="utf-8-sig"
+    )
 
 
 def bank_row(**overrides):
@@ -110,6 +130,7 @@ class LongHoldV4Tests(unittest.TestCase):
             (lambda cfg: cfg["t_strategy"].__setitem__("minimum_holding_days", 30), "maximum_holding_days"),
             (lambda cfg: cfg["account"].__setitem__("allow_margin", True), "cash-only"),
             (lambda cfg: cfg["portfolio"].__setitem__("max_single_etf_weight", 0.40), "max_sector_weight"),
+            (lambda cfg: cfg["execution"].__setitem__("max_price_deviation_bps", -1.0), "max_price_deviation"),
         ]
         for mutate, message in mutations:
             with self.subTest(message=message):
@@ -360,7 +381,7 @@ class LongHoldV4Tests(unittest.TestCase):
         targets = pd.DataFrame(
             [
                 {
-                    "asset": f"S{index}",
+                    "asset": f"600{index:03d}",
                     "name": f"Stock {index}",
                     "asset_type": "stock",
                     "sector": "bank",
@@ -381,16 +402,34 @@ class LongHoldV4Tests(unittest.TestCase):
             "cash_cny": 500000.0,
             "holdings": [
                 {
-                    "asset": f"S{index}",
+                    "asset": f"600{index:03d}",
+                    "name": f"Stock {index}",
+                    "asset_type": "stock",
+                    "sector": "bank",
                     "core_shares": 5000,
+                    "core_average_cost_cny": 10.0,
+                    "core_open_date": "2026-01-02",
                     "t_shares": 0,
+                    "t_average_cost_cny": 0.0,
+                    "t_open_date": None,
                     "full_target_shares_reference": 6250,
                 }
                 for index in range(8)
             ],
         }
-        prices = {f"S{index}": 10.0 for index in range(8)}
-        orders = plan_orders(targets, account, prices, self.config, "2026-07-17")
+        account = normalize_account(account, self.config)
+        prices = {f"600{index:03d}": 10.0 for index in range(8)}
+        orders = plan_orders(
+            targets,
+            account,
+            prices,
+            self.config,
+            "2026-07-17",
+            run_id="TEST-RUN",
+            run_manifest_sha256="a" * 64,
+            trade_calendar_sha256="b" * 64,
+            risk_state_at_signal="NORMAL",
+        )
         buys = orders[orders["side"] == "buy"]
         t_notional = float(buys.loc[buys["sleeve"] == "t", "notional"].sum())
         projected_cash = 500000.0 - float((buys["notional"] + buys["estimated_cost"]).sum())
@@ -559,6 +598,7 @@ class LongHoldV4Tests(unittest.TestCase):
                 [("2026-07-17", 10.0, 10.0, 10.0, 10.0, "qfq_adjusted")],
                 columns=["date", "open", "high", "low", "close", "return_basis"],
             ).to_csv(root / "prices" / "600000.csv", index=False, encoding="utf-8-sig")
+            prepare_runtime_state(root, config)
             paths = run_current(root, config, "2026-07-17")
             readiness = json.loads(paths["readiness"].read_text(encoding="utf-8"))
             candidate_columns = pd.read_csv(paths["candidates"], encoding="utf-8-sig", nrows=0).columns
@@ -591,6 +631,7 @@ class LongHoldV4Tests(unittest.TestCase):
             pd.DataFrame([bank_row(as_of_date="2026-07-01", available_date="2026-07-01")]).to_csv(
                 root / "snapshot.csv", index=False, encoding="utf-8-sig"
             )
+            prepare_runtime_state(root, config)
             paths = run_current(root, config, "2026-07-17")
             readiness = json.loads(paths["readiness"].read_text(encoding="utf-8"))
             agents = pd.read_csv(paths["agents"], encoding="utf-8-sig").set_index("agent")
@@ -653,6 +694,7 @@ class LongHoldV4Tests(unittest.TestCase):
                     "return_basis": "qfq_adjusted",
                 }
             ).to_csv(root / "prices" / "600000.csv", index=False, encoding="utf-8-sig")
+            prepare_runtime_state(root, config)
             paths = run_current(root, config, "2026-07-17")
             readiness = json.loads(paths["readiness"].read_text(encoding="utf-8"))
             candidates = pd.read_csv(paths["candidates"], encoding="utf-8-sig", dtype={"asset": str})
@@ -697,6 +739,7 @@ class LongHoldV4Tests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            prepare_runtime_state(root, config)
             brake_paths = run_current(root, config, "2026-07-17")
             brake_orders = pd.read_csv(brake_paths["orders"], encoding="utf-8-sig")
             brake_account = json.loads(brake_paths["account"].read_text(encoding="utf-8"))
@@ -707,6 +750,13 @@ class LongHoldV4Tests(unittest.TestCase):
             self.assertEqual(set(brake_orders["side"]), {"review", "sell"})
             t_sell = brake_orders[(brake_orders["sleeve"] == "t") & (brake_orders["side"] == "sell")].iloc[0]
             self.assertTrue(bool(t_sell["risk_override_allowed"]))
+            verified_orders = verify_order_frame(brake_orders)
+            manifest_sha256 = hashlib.sha256(brake_paths["manifest"].read_bytes()).hexdigest()
+            self.assertEqual(set(verified_orders["run_manifest_sha256"]), {manifest_sha256})
+            order_state = normalize_order_state_book(
+                json.loads(brake_paths["order_state"].read_text(encoding="utf-8"))
+            )
+            self.assertEqual(order_state["current_run_id"], verified_orders.iloc[0]["run_id"])
 
     def test_held_asset_missing_from_snapshot_blocks_without_crashing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -751,6 +801,7 @@ class LongHoldV4Tests(unittest.TestCase):
                 [("2026-07-17", 10.0, 10.0, 10.0, 10.0, "qfq_adjusted")],
                 columns=["date", "open", "high", "low", "close", "return_basis"],
             ).to_csv(root / "prices" / "600000.csv", index=False, encoding="utf-8-sig")
+            prepare_runtime_state(root, config)
             paths = run_current(root, config, "2026-07-17")
             readiness = json.loads(paths["readiness"].read_text(encoding="utf-8"))
             agents = pd.read_csv(paths["agents"], encoding="utf-8-sig").set_index("agent")
