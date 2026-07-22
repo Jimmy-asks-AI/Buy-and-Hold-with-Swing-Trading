@@ -1,0 +1,66 @@
+{
+  "bundle_sha256": "5120887f9565b0ace2e846aec1101c3b5a95ba3ce34d39e93d7ddabe2a25ab1e",
+  "chain": "snapshot -> candidate -> target -> order -> fill -> account -> NAV",
+  "config_sha256": "0b2561e23a1c8876c25bb1f151243f272676a0bfffb62a379de0e9b6831d4984",
+  "files": [
+    {
+      "bytes": 344,
+      "path": "snapshot.csv",
+      "sha256": "da60744d3f446bfc8709b6f9c97738fe742fd37578d7dc68099137fa9cb3a406"
+    },
+    {
+      "bytes": 167,
+      "path": "asset_market_states.csv",
+      "sha256": "ed8129ca36ff244d8da71b145aecf6eb230d428911faf737125648a07059edda"
+    },
+    {
+      "bytes": 61,
+      "path": "trading_calendar.csv",
+      "sha256": "46cf6c7c7e2e2d225685c4a20622f44a960f56502b42d63c6a3f5dee397ae7e5"
+    },
+    {
+      "bytes": 503,
+      "path": "candidate_decisions.csv",
+      "sha256": "b200908b378ce91bd5761251dcaf6420af86326cd32420445d505743b04800be"
+    },
+    {
+      "bytes": 665,
+      "path": "target_weights.csv",
+      "sha256": "011a7ef494750ce2ffe830d8ecb7b47caeca13a52e9e4e477dd4856abf9ccc84"
+    },
+    {
+      "bytes": 1793,
+      "path": "orders.csv",
+      "sha256": "6aed85ff25ec0817716e6130c07bc88b366080b85b12fdda11041d33770a7bd6"
+    },
+    {
+      "bytes": 464,
+      "path": "fills.csv",
+      "sha256": "d83326a3fc3e9e9e2138a146ecc33a7e1ddea527671b117b4b68b5e597bc7a80"
+    },
+    {
+      "bytes": 4402,
+      "path": "account.json",
+      "sha256": "48ac623ad911ec3f01f9c82b346ab4fb2607ad1f2564b2530569f93a631b602a"
+    },
+    {
+      "bytes": 1350,
+      "path": "ledger.csv",
+      "sha256": "8574af3dbb6d48ac87482ac26d924c922da6a1fd2a4974a666af861348a9f85c"
+    },
+    {
+      "bytes": 1486,
+      "path": "order_state.json",
+      "sha256": "3de7d024f5802b8e7d65cbc9c83d0903bd5011eb5569a6ef1b08c557fe47d4e2"
+    },
+    {
+      "bytes": 135,
+      "path": "nav.csv",
+      "sha256": "8ea016850d5c9c1ac1ef1661dbaa939fbd28e474bfdb3e72252279eed8dcf1ef"
+    }
+  ],
+  "notice": "SYNTHETIC_ONLY_NOT_REAL_SECURITY_OR_INVESTMENT_ADVICE",
+  "order_binding_sha256": "7e63890980fd3e9e3b5741869f1a0bdbdde531d1ae766a22c84be73e1719169a",
+  "run_id": "synthetic-replay-v1",
+  "schema_version": 1
+}
