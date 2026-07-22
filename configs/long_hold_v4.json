@@ -110,7 +110,8 @@
     "etf_settlement": "T+1"
   },
   "execution": {
-    "order_valid_calendar_days": 14
+    "order_valid_calendar_days": 14,
+    "max_price_deviation_bps": 100.0
   },
   "portfolio": {
     "target_core_exposure": 0.80,
@@ -135,6 +136,8 @@
     "snapshot_path": "data_raw/long_hold_v4/research_snapshot.csv",
     "price_directory": "data_raw/long_hold_v4/prices",
     "account_path": "portfolio_lab/long_hold_v4/account.json",
+    "order_state_path": "portfolio_lab/long_hold_v4/order_state.json",
+    "trade_calendar_path": "data_raw/akshare/calendar/trade_calendar.csv",
     "agent_contracts_path": "configs/long_hold_v4_agent_contracts.json",
     "output_directory": "outputs/long_hold_v4/current",
     "source_manifest_paths": [
