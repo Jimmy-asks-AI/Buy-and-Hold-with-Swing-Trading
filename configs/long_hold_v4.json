@@ -141,6 +141,7 @@
     "agent_contracts_path": "configs/long_hold_v4_agent_contracts.json",
     "output_directory": "outputs/long_hold_v4/current",
     "source_manifest_paths": [
+      "data_raw/long_hold_v4/combined_snapshot_manifest.json",
       "data_raw/long_hold_v4/manifests/stock_source_manifest_latest.json",
       "data_raw/long_hold_v4/manifests/etf_source_manifest_latest.json"
     ],

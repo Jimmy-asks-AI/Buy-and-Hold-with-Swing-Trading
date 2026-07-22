@@ -19,7 +19,7 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 
-from .snapshot_store import write_snapshot_part
+from .snapshot_store import snapshot_write_lock, write_snapshot_part
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -710,7 +710,7 @@ def finalize_snapshot(rows: list[dict[str, Any]]) -> pd.DataFrame:
     return snapshot.reindex(columns=columns).sort_values(["sector", "asset"]).reset_index(drop=True)
 
 
-def run_builder(
+def _run_builder(
     as_of: pd.Timestamp,
     max_assets_per_sector: int | None,
     refresh: bool,
@@ -750,7 +750,16 @@ def run_builder(
 
     snapshot = finalize_snapshot(rows)
     snapshot, valuation_overlay = apply_current_valuation_overlay(snapshot, as_of)
-    combined = write_snapshot_part("stock", snapshot)
+    combined = write_snapshot_part(
+        "stock",
+        snapshot,
+        builder_config={
+            "as_of_date": str(as_of.date()),
+            "max_assets_per_sector": max_assets_per_sector,
+            "refresh": refresh,
+        },
+        builder_code_paths=[Path(__file__), Path(__file__).with_name("snapshot_store.py")],
+    )
     manifest_frame = pd.DataFrame(manifest)
     manifest_path = RAW_ROOT / "manifests" / f"stock_snapshot_{as_of.strftime('%Y%m%d')}.csv"
     _write_csv(manifest_frame, manifest_path)
@@ -814,6 +823,16 @@ def run_builder(
     }
     (RAW_ROOT / "stock_snapshot_summary.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
+
+
+def run_builder(
+    as_of: pd.Timestamp,
+    max_assets_per_sector: int | None,
+    refresh: bool,
+    sleep_seconds: float,
+) -> dict[str, Any]:
+    with snapshot_write_lock(RAW_ROOT / ".stock_snapshot_builder.lock"):
+        return _run_builder(as_of, max_assets_per_sector, refresh, sleep_seconds)
 
 
 def main() -> None:
