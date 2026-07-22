@@ -3,18 +3,36 @@ name: long-hold-v4
 on:
   push:
     paths:
-      - ".github/workflows/long-hold-v4.yml"
+      - ".github/workflows/**"
       - "strategy_lab/long_hold_v4/**"
-      - "tests/test_long_hold_v4*.py"
+      - "strategy_lab/performance_metrics.py"
+      - "strategy_lab/portfolio_weighting_constraints.py"
+      - "strategy_lab/paper_trading_monitor.py"
+      - "strategy_lab/real_data_adapter.py"
+      - "data_catalog/**"
+      - "portfolio_lab/long_hold_v4/**"
+      - "tests/**"
       - "configs/long_hold_v4*.json"
-      - "requirements-long-hold-v4.txt"
+      - "configs/schemas/**"
+      - "requirements*.txt"
+      - "examples/synthetic_run/**"
+      - "README.md"
   pull_request:
     paths:
-      - ".github/workflows/long-hold-v4.yml"
+      - ".github/workflows/**"
       - "strategy_lab/long_hold_v4/**"
-      - "tests/test_long_hold_v4*.py"
+      - "strategy_lab/performance_metrics.py"
+      - "strategy_lab/portfolio_weighting_constraints.py"
+      - "strategy_lab/paper_trading_monitor.py"
+      - "strategy_lab/real_data_adapter.py"
+      - "data_catalog/**"
+      - "portfolio_lab/long_hold_v4/**"
+      - "tests/**"
       - "configs/long_hold_v4*.json"
-      - "requirements-long-hold-v4.txt"
+      - "configs/schemas/**"
+      - "requirements*.txt"
+      - "examples/synthetic_run/**"
+      - "README.md"
 
 jobs:
   test:
@@ -25,7 +43,14 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: requirements-long-hold-v4.txt
-      - run: pip install -r requirements-long-hold-v4.txt
+          cache-dependency-path: |
+            requirements-long-hold-v4.txt
+            requirements-long-hold-v4-public-data.txt
+            requirements-long-hold-v4-authorized-data.txt
+            requirements-long-hold-v4-pdf.txt
+            requirements-long-hold-v4-dev.txt
+      - run: pip install -r requirements-long-hold-v4-dev.txt
+      - run: python -m pytest -q tests
       - run: python -m unittest discover -s tests -p "test_long_hold_v4*.py" -v
-      - run: python -m compileall strategy_lab/long_hold_v4 tests
+      - run: python -m compileall strategy_lab tests
+      - run: python -m strategy_lab.long_hold_v4.synthetic_replay
