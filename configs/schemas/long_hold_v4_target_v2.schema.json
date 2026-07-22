@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "long_hold_v4_target_v2.schema.json",
+  "title": "Long Hold V4 target row schema v2",
+  "type": "object",
+  "required": ["target_schema_version", "target_semantics", "signal_date", "asset", "target_core_weight", "target_t_weight"],
+  "properties": {
+    "target_schema_version": {"const": 2},
+    "target_semantics": {"enum": ["FULL_SNAPSHOT", "DELTA"]},
+    "signal_date": {"type": "string", "format": "date"},
+    "snapshot_asset_count": {"type": "integer", "minimum": 0},
+    "asset": {"type": "string", "minLength": 1},
+    "target_core_weight": {"type": "number", "minimum": 0, "maximum": 1},
+    "target_t_weight": {"type": "number", "minimum": 0, "maximum": 1}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"target_semantics": {"const": "FULL_SNAPSHOT"}}},
+      "then": {"required": ["snapshot_asset_count"]}
+    }
+  ],
+  "additionalProperties": true
+}

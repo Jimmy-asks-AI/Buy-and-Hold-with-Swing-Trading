@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "long_hold_v4_price_v2.schema.json",
+  "title": "Long Hold V4 price row schema v2",
+  "type": "object",
+  "required": ["date", "asset", "asset_type", "open", "close", "return_basis", "price_basis"],
+  "properties": {
+    "date": {"type": "string", "format": "date"},
+    "asset": {"type": "string", "minLength": 1},
+    "asset_type": {"enum": ["stock", "etf"]},
+    "open": {"type": "number", "exclusiveMinimum": 0},
+    "close": {"type": "number", "exclusiveMinimum": 0},
+    "return_basis": {"enum": ["unadjusted_executable", "qfq_adjusted", "hfq_adjusted", "total_return", "price_index_proxy"]},
+    "price_basis": {"enum": ["unadjusted_executable", "qfq_adjusted", "hfq_adjusted", "total_return", "price_index_proxy"]},
+    "is_tradable": {"type": "boolean"},
+    "list_date": {"type": "string", "format": "date"},
+    "delist_date": {"type": ["string", "null"], "format": "date"}
+  },
+  "additionalProperties": true
+}
