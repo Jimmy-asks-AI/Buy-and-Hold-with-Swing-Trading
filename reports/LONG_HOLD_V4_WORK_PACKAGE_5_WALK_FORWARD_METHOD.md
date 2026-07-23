@@ -141,6 +141,14 @@
 
 这里没有失败窗口绩效可披露。数据限制详见 `LONG_HOLD_V4_WORK_PACKAGE_5_PIT_GATE_2026-07-23.md` 和两份工作包 5 数据清单。
 
+加固提交 `517a45d` 上又使用原冻结缺口清单执行了
+`wp5-hardening-blocked-20260723-v1`。结果仍为
+`BLOCKED_PIT_GATE`，共87项失败，manifest SHA-256为
+`947dd0efa33043e6a29e50c89ea30f68f5092ff1ea48ff7fd9058fe72f901c61`。
+新增失败来自源行PIT使用清单、8份正式输入、验证/独立全收益基准，
+以及旧清单绑定的代码和配置已过期。该运行只验证新门禁会继续失败闭锁，
+没有生成正式绩效。
+
 ## 晋级规则
 
 代码不会自动晋级。即使 PIT Gate、全部窗口、独立测试、成本解释、失败窗口披露和人工签字都齐全，程序仍输出 `promotion_allowed=false` 与 `manual_promotion_action_required`，等待仓库外的明确治理动作。当前证据结论只能写为 `RESEARCH_ONLY`、`BLOCKED` 或 `NO_ACTION`。

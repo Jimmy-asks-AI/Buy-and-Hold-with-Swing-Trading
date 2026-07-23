@@ -111,6 +111,7 @@ flowchart LR
 - `formal_backtest_allowed=false`，全部训练、验证和独立测试窗口均为 `BLOCKED_NOT_RUN`；
 - `promotion_allowed=false`，没有年化收益、Sharpe、回撤控制或做 T 增益结论。
 - 新的正式运行器和入库入口已由合成数据端到端覆盖，但真实10类PIT数据尚未交付，`live_trading_allowed=false`。
+- 加固提交上的阻断复核 `wp5-hardening-blocked-20260723-v1` 产生87项失败，确认旧缺口清单不能绕过新契约进入正式评估。
 
 详细证据见：
 
