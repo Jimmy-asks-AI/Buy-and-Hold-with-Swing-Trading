@@ -1387,11 +1387,17 @@ def main() -> None:
         initial_cash=args.initial_cash,
         consume_independent_test=args.consume_independent_test,
     )
+    manifest = json.loads(
+        paths["manifest"].read_text(encoding="utf-8")
+    )
     print(
         json.dumps(
             {
-                "status": "published",
+                "status": manifest["status"],
                 "run_directory": str(paths["run_directory"]),
+                "independent_test_consumed": manifest[
+                    "independent_test_consumed"
+                ],
                 "promotion_allowed": False,
                 "live_trading_allowed": False,
             },
