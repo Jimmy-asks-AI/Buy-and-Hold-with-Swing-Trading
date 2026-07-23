@@ -1,0 +1,4 @@
+-r requirements-long-hold-v4-public-data.txt
+-r requirements-long-hold-v4-authorized-data.txt
+-r requirements-long-hold-v4-pdf.txt
+pytest==9.0.3

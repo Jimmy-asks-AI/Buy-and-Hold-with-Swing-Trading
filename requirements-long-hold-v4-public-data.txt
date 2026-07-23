@@ -1,0 +1,7 @@
+-r requirements-long-hold-v4.txt
+akshare==1.18.60
+requests==2.33.1
+beautifulsoup4==4.14.3
+lxml==6.0.3
+charset-normalizer==3.4.7
+baostock==0.8.9

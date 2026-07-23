@@ -1,0 +1,2 @@
+-r requirements-long-hold-v4.txt
+jqdatasdk==1.9.8

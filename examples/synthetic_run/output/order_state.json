@@ -1,0 +1,43 @@
+{
+  "account_state_sha256": "71a6f905f34571deb27b88e8828f81246a1ab1a0edf24523901bb7b9f03cb384",
+  "account_version": 2,
+  "book_sha256": "e2a07a1a0a96034bb16ff6decdca6e5375b505a0888c4b6a8fb64ae1fb33a630",
+  "current_run_id": "synthetic-replay-v1",
+  "orders": [
+    {
+      "asset": "000000",
+      "created_at": "2026-01-05T16:00:00",
+      "filled_shares": 2900,
+      "order_id": "LHV4-20260105-000000-core-buy-d41367c29f18e4ad",
+      "order_sha256": "328609585d65a7bae9858d83bdc39e2aaeb03798b4c32a37b6f4e4626fba0ef1",
+      "ordered_shares": 2900,
+      "remaining_shares": 0,
+      "run_id": "synthetic-replay-v1",
+      "side": "buy",
+      "sleeve": "core",
+      "status": "FILLED",
+      "status_reason": "fill_applied",
+      "superseded_by_order_id": null,
+      "updated_at": "2026-01-06T00:00:00",
+      "valid_through_date": "2026-01-19"
+    },
+    {
+      "asset": "999999",
+      "created_at": "2026-01-05T16:00:00",
+      "filled_shares": 9900,
+      "order_id": "LHV4-20260105-999999-core-buy-61606c11a6a24eb1",
+      "order_sha256": "069c9ac41acac8ec8a3d6548d4b574dcc3620e8b1b7fbbf7d1bd64ddbae1c40d",
+      "ordered_shares": 9900,
+      "remaining_shares": 0,
+      "run_id": "synthetic-replay-v1",
+      "side": "buy",
+      "sleeve": "core",
+      "status": "FILLED",
+      "status_reason": "fill_applied",
+      "superseded_by_order_id": null,
+      "updated_at": "2026-01-06T00:00:00",
+      "valid_through_date": "2026-01-19"
+    }
+  ],
+  "schema_version": 1
+}

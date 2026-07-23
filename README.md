@@ -138,6 +138,24 @@ python -m pip install --upgrade pip
 pip install -r requirements-long-hold-v4.txt
 ```
 
+默认文件只安装合成 replay 与核心计算所需的 NumPy、pandas。其余能力按用途安装：
+
+```powershell
+# 公共网页/行情采集
+pip install -r requirements-long-hold-v4-public-data.txt
+
+# 需要用户自行取得授权的聚宽 SDK
+pip install -r requirements-long-hold-v4-authorized-data.txt
+
+# PDF 证据提取与 OCR 前处理
+pip install -r requirements-long-hold-v4-pdf.txt
+
+# 完整开发测试；显式汇总上述可选依赖
+pip install -r requirements-long-hold-v4-dev.txt
+```
+
+依赖分组和许可证风险见 [`data_catalog/long_hold_v4_dependency_license_review.md`](data_catalog/long_hold_v4_dependency_license_review.md)。安装 SDK 不代表取得数据授权。
+
 ## 本地配置
 
 先建立本地凭据、成交回执文件，并显式初始化纸面账户：
@@ -156,15 +174,32 @@ python -X utf8 -m strategy_lab.long_hold_v4.execution --initialize-account --ini
 核心CI命令：
 
 ```powershell
-python -X utf8 -m unittest discover -s tests -p "test_long_hold_v4*.py" -v
-python -m compileall strategy_lab/long_hold_v4 tests
+python -m pytest -q tests
+python -m unittest discover -s tests -p "test_long_hold_v4*.py" -v
+python -m compileall strategy_lab tests
 ```
 
-使用pytest运行更广的本地回归：
+GitHub Actions 逐条执行以上三组命令，不以 `unittest` 代替完整 `pytest`。
+
+## 公开合成复现
+
+无需凭据、真实行情和外部 API，在仓库根目录运行：
 
 ```powershell
-python -X utf8 -m pytest -q tests
+python -m strategy_lab.long_hold_v4.synthetic_replay
 ```
+
+该命令使用 [`examples/synthetic_run/`](examples/synthetic_run/) 中的虚构材料，重建：
+
+`snapshot → candidate → FULL_SNAPSHOT target → order → fill → account/ledger → NAV`
+
+示例同时包含合成股票、合成 ETF、可交易与停牌日期、基本财务字段、订单状态账本、成交账本、账户和 NAV。连续运行两次的预期 `bundle_sha256` 为：
+
+```text
+5120887f9565b0ace2e846aec1101c3b5a95ba3ce34d39e93d7ddabe2a25ab1e
+```
+
+逐文件预期值记录在 [`examples/synthetic_run/expected_manifest.json`](examples/synthetic_run/expected_manifest.json)。示例代码、名称和 manifest 均标注 `SYNTHETIC_ONLY`；它只证明纸面链路可以确定性复现，不证明策略有效，也不能用于实盘。
 
 ## 运行研究链
 

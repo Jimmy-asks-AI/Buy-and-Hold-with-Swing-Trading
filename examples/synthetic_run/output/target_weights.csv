@@ -1,0 +1,3 @@
+signal_date,asset,name,asset_type,sector,final_score,entry_action,available_date,target_semantics,target_schema_version,snapshot_asset_count,full_target_weight,target_core_weight,target_t_weight_cap,target_t_weight,t_action,t_reasons,hard_veto_reasons,manual_risk_review_required,portfolio_risk_reasons
+2026-01-05,000000,合成股票甲（非真实证券）,stock,bank,72.0,BUILD_FIRST_TRANCHE,2026-01-05,FULL_SNAPSHOT,2,2,0.12,0.06,0.0,0.0,HOLD_T,synthetic_core_build_only,,False,
+2026-01-05,999999,合成ETF甲（非真实证券）,etf,dividend_index,70.0,BUILD_FIRST_TRANCHE,2026-01-05,FULL_SNAPSHOT,2,2,0.25,0.1,0.0,0.0,HOLD_T,synthetic_core_build_only,,False,

@@ -1,0 +1,3 @@
+as_of_date,available_date,asset,name,asset_type,sector,is_tradeable,candidate_status,final_score,entry_action,research_notice
+2026-01-05,2026-01-05,000000,合成股票甲（非真实证券）,stock,bank,True,SYNTHETIC_PAPER_ELIGIBLE,72.0,BUILD_FIRST_TRANCHE,SYNTHETIC_ONLY_NOT_REAL_SECURITY_OR_INVESTMENT_ADVICE
+2026-01-05,2026-01-05,999999,合成ETF甲（非真实证券）,etf,dividend_index,True,SYNTHETIC_PAPER_ELIGIBLE,70.0,BUILD_FIRST_TRANCHE,SYNTHETIC_ONLY_NOT_REAL_SECURITY_OR_INVESTMENT_ADVICE
