@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "output_root": "outputs/long_hold_v4/work_package_5/pit_gate_runs",
+  "version_store_root": "data_raw/long_hold_v4/pit_versions",
+  "required_dataset_ids": [
+    "stock_industry_classification_history",
+    "stock_financial_statement_vintages",
+    "stock_historical_valuation",
+    "etf_benchmark_history",
+    "etf_total_return_prices",
+    "etf_historical_aum_liquidity",
+    "etf_historical_fees",
+    "etf_historical_tracking_error",
+    "index_total_return_history",
+    "index_historical_valuation"
+  ],
+  "allowed_license_values": [
+    "LICENSED_RESEARCH_USE",
+    "OFFICIAL_OPEN_RESEARCH_USE"
+  ],
+  "maximum_manifest_age_days": 7,
+  "gate_code_paths": [
+    "strategy_lab/long_hold_v4/pit_gate_v2.py"
+  ],
+  "promotion_allowed": false,
+  "independent_review_required": true
+}

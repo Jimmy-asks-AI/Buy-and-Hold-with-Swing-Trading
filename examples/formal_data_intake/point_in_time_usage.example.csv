@@ -1,0 +1,2 @@
+dataset_id,source_revision_id,source_row_key,asset,decision_date,available_date
+stock_financial_statement_vintages,example-r1,EXAMPLE_ONLY_ROW_KEY,600000.SH,2020-05-08,2020-04-30

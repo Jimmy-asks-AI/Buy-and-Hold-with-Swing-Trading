@@ -1,0 +1,2 @@
+candidate_id,parameters_json,train_score,split_roles_used
+example-candidate-01,"{""lookback"":20}",0.0,train+validation

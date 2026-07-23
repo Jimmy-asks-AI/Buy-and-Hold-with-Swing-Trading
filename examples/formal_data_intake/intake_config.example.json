@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "target_manifest_id": "replace-with-immutable-id",
+  "decision_date": "2026-07-23",
+  "required_coverage_start": "2005-01-01",
+  "required_coverage_end": "2026-07-23",
+  "version_store_root": "data_raw/long_hold_v4/pit_versions",
+  "output_manifest_path": "data_raw/long_hold_v4/formal_target_manifest.json",
+  "target_generation": {
+    "code_paths": [
+      "strategy_lab/long_hold_v4/pipeline.py",
+      "strategy_lab/long_hold_v4/walk_forward.py"
+    ],
+    "config_path": "configs/long_hold_v4_work_package_5_walk_forward.json"
+  },
+  "point_in_time_usage_path": "data_raw/long_hold_v4/point_in_time_usage.csv",
+  "formal_inputs": {
+    "validation_execution_states": "data_raw/long_hold_v4/formal/validation_execution_states.csv",
+    "validation_target_weights": "data_raw/long_hold_v4/formal/validation_target_weights.csv",
+    "validation_benchmark_returns": "data_raw/long_hold_v4/formal/validation_benchmark_returns.csv",
+    "independent_execution_states": "data_raw/long_hold_v4/formal/independent_execution_states.csv",
+    "independent_target_weights": "data_raw/long_hold_v4/formal/independent_target_weights.csv",
+    "independent_benchmark_returns": "data_raw/long_hold_v4/formal/independent_benchmark_returns.csv",
+    "trading_calendar": "data_raw/long_hold_v4/formal/trading_calendar.csv",
+    "candidate_registry": "data_raw/long_hold_v4/formal/candidate_registry.csv"
+  },
+  "datasets": [
+    {
+      "source_path": "data_raw/long_hold_v4/vendor/stock_financial_statement_vintages.csv",
+      "metadata": {
+        "dataset_id": "stock_financial_statement_vintages",
+        "provider": "REPLACE_WITH_CONTRACTED_PROVIDER",
+        "license": "LICENSED_RESEARCH_USE",
+        "coverage_start": "2005-01-01",
+        "coverage_end": "2026-07-23",
+        "observed_at": "2026-07-23T12:00:00+08:00",
+        "available_date": "2005-01-01",
+        "revision_id": "replace-with-vendor-delivery-id",
+        "symbol": "ALL_A_SHARE_LIFECYCLE_ASSETS",
+        "frequency": "filing_revision_event",
+        "schema_version": 1,
+        "pit_status": "QUALIFIED_PIT",
+        "known_limitations": "REPLACE_WITH_DISCLOSED_LIMITATIONS",
+        "current_snapshot": false,
+        "contains_current_snapshot_backfill": false,
+        "contains_current_constituents_backfill": false
+      }
+    }
+  ]
+}

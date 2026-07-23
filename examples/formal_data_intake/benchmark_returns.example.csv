@@ -1,0 +1,2 @@
+date,benchmark_id,total_return,available_date,return_basis,historical_backtest_allowed
+2020-01-02,000985.CSI,0.0123,2020-01-02,total_return,true

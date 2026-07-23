@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "output_root": "outputs/long_hold_v4/work_package_5/walk_forward_runs",
+  "method": {
+    "training_window_sessions": 756,
+    "validation_window_sessions": 126,
+    "independent_test_window_sessions": 252,
+    "step_sessions": 126,
+    "purge_sessions": 20,
+    "embargo_sessions": 20,
+    "label_horizon_sessions": 20,
+    "training_mode": "rolling"
+  },
+  "tuning": {
+    "allowed_split_roles": [
+      "train",
+      "validation"
+    ],
+    "maximum_candidate_count": 24,
+    "candidate_registry_required": true,
+    "multiple_testing_correction": "holm",
+    "familywise_alpha": 0.05,
+    "significance_block_sessions": 20,
+    "pbo_blocks": 8,
+    "maximum_pbo": 0.35,
+    "minimum_deflated_sharpe_probability": 0.95,
+    "independent_test_one_time": true
+  },
+  "cost_scenarios": {
+    "interpretation": "在账户实际记录的佣金、税费和固定费用之外，按双边成交额追加滑点",
+    "additional_slippage_bps": [
+      5,
+      10,
+      20
+    ]
+  },
+  "benchmark": {
+    "benchmark_id": "000985.CSI",
+    "return_basis": "total_return",
+    "description": "中证全指全收益指数；不得以价格指数替代"
+  },
+  "execution": {
+    "signal_execution": "close_signal_asset_level_next_tradable_open",
+    "suspension_policy": "no_trade_and_carry_last_verified_close",
+    "price_limit_policy": "conservative_no_trade_on_limit_up_or_limit_down",
+    "delisting_policy": "executable_exit_or_formal_terminal_cash_event_required",
+    "missing_market_data_policy": "no_trade; held_asset_requires_carried_verified_value",
+    "unfilled_targets_accrue_returns": false
+  },
+  "governance": {
+    "promotion_allowed": false,
+    "automatic_promotion_allowed": false,
+    "manual_review_required": true,
+    "failed_window_disclosure_required": true,
+    "survivorship_bias_audit_required": true,
+    "lookahead_audit_required": true,
+    "multiple_testing_audit_required": true
+  }
+}

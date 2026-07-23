@@ -8,6 +8,8 @@
 
 工作包 3 起采用 v2 数据契约：正式回测只接收完整目标快照，真实账户只用未复权可执行价盯市，年度指标须先通过财政年度连续性检查。详见 [数据契约](data_catalog/long_hold_v4_contract_v2.md) 与 [迁移说明](notes/long_hold_v4_v2_migration_zh.md)。
 
+工作包 5 增加版本化 PIT Gate 与 purged/embargoed walk-forward。正式入口要求历史决策逐行绑定版本化源数据，验证期与独立测试期物理分离，并以中证全指全收益为基准，在20bps额外滑点下重新计算候选显著性、PBO和Deflated Sharpe。2026-07-23 的缺口运行仍为 `BLOCKED_PIT_GATE`；没有真实正式窗口，也没有新的绩效证据。
+
 ## 研究目标
 
 - 筛选盈利与分红可持续、资产负债表可靠、长期增长相对稳定的股票和ETF。
@@ -102,11 +104,26 @@ flowchart LR
 - 当前没有可晋级的walk-forward持仓路径。
 - 所有Long Hold V4历史绩效引用和模型晋级保持关闭。
 
+工作包 5 的工程检查点为 `2026-07-23`：
+
+- 十类正式数据逐项登记，未取得项的文件和清单哈希明确记为 `NOT_ACQUIRED`；
+- PIT Gate run_id 为 `wp5-gap-audit-20260723-v1`，Gate manifest SHA-256 为 `5811b8292cc8c2df7804f1777371da7798246638f833c3b05ab345830d2724f4`；
+- `formal_backtest_allowed=false`，全部训练、验证和独立测试窗口均为 `BLOCKED_NOT_RUN`；
+- `promotion_allowed=false`，没有年化收益、Sharpe、回撤控制或做 T 增益结论。
+- 新的正式运行器和入库入口已由合成数据端到端覆盖，但真实10类PIT数据尚未交付，`live_trading_allowed=false`。
+- 加固提交上的阻断复核 `wp5-hardening-blocked-20260723-v1` 产生87项失败，确认旧缺口清单不能绕过新契约进入正式评估。
+
 详细证据见：
 
 - [`LONG_HOLD_V4.md`](LONG_HOLD_V4.md)
 - [`reports/PROJECT_AUDIT_FINAL_2026-07-19.md`](reports/PROJECT_AUDIT_FINAL_2026-07-19.md)
 - [`reports/LONG_HOLD_V4_RESUME_CHECKPOINT_2026-07-19.md`](reports/LONG_HOLD_V4_RESUME_CHECKPOINT_2026-07-19.md)
+- [`reports/LONG_HOLD_V4_WORK_PACKAGE_5_PIT_GATE_2026-07-23.md`](reports/LONG_HOLD_V4_WORK_PACKAGE_5_PIT_GATE_2026-07-23.md)
+- [`reports/LONG_HOLD_V4_WORK_PACKAGE_5_WALK_FORWARD_METHOD.md`](reports/LONG_HOLD_V4_WORK_PACKAGE_5_WALK_FORWARD_METHOD.md)
+- [`data_catalog/long_hold_v4_work_package_5_dataset_gap_inventory.csv`](data_catalog/long_hold_v4_work_package_5_dataset_gap_inventory.csv)
+- [`data_catalog/long_hold_v4_work_package_5_authorization_interfaces.csv`](data_catalog/long_hold_v4_work_package_5_authorization_interfaces.csv)
+- [`data_catalog/long_hold_v4_formal_evaluation_data_contract_v1.md`](data_catalog/long_hold_v4_formal_evaluation_data_contract_v1.md)
+- [`data_catalog/long_hold_v4_guotai_haitong_data_request_2026-07-23.md`](data_catalog/long_hold_v4_guotai_haitong_data_request_2026-07-23.md)
 - [`data_catalog/performance_evidence_registry.csv`](data_catalog/performance_evidence_registry.csv)
 
 ## 目录结构
@@ -210,6 +227,31 @@ python -X utf8 -m strategy_lab.long_hold_v4.pit_history_gate --as-of 2026-07-19
 python -X utf8 -m strategy_lab.long_hold_v4.cli --as-of 2026-07-19
 ```
 
+工作包 5 的冻结缺口清单位于 `configs/long_hold_v4_work_package_5_blocked_target_manifest.json`。它只复现2026-07-23的阻断证据，不能改成通过状态。正式数据接入后应从当前代码 commit 生成新的 target manifest，再运行 `pit_gate_v2`；Gate 通过前不得启动 walk-forward。
+
+正式数据交付后，按以下顺序运行：
+
+```powershell
+python -X utf8 -m strategy_lab.long_hold_v4.formal_data_intake `
+  --project-root . `
+  --intake-config data_raw/long_hold_v4/formal_intake.json
+
+python -X utf8 -m strategy_lab.long_hold_v4.pit_gate_v2 `
+  --project-root . `
+  --config configs/long_hold_v4_work_package_5_pit_gate.json `
+  --target-manifest data_raw/long_hold_v4/formal_target_manifest.json `
+  --run-id <pit_gate_run_id>
+
+python -X utf8 -m strategy_lab.long_hold_v4.formal_walk_forward run `
+  --project-root . `
+  --pit-gate-run-directory <pit_gate_run_directory> `
+  --strategy-config configs/long_hold_v4.json `
+  --walk-forward-config configs/long_hold_v4_work_package_5_walk_forward.json `
+  --run-id <formal_run_id>
+```
+
+第一次只运行 validation。验证报告经人工复核后，才可在新的 `run_id` 上增加 `--consume-independent-test`。同一研究输出根目录只允许消费一次独立测试集。运行后用 `formal_walk_forward verify` 复核全部哈希和状态一致性。字段模板见 [`examples/formal_data_intake/`](examples/formal_data_intake/)。
+
 主要输出位于 `outputs/long_hold_v4/`：
 
 - `pit_gate/readiness.json`：历史数据是否允许进入回测；
@@ -236,7 +278,8 @@ python -X utf8 -m strategy_lab.long_hold_v4.cli --as-of 2026-07-19
 - ETF基准变更、历史规模流动性、费率和跟踪误差链尚未全部关闭。
 - 部分行情源只能取得当前最终历史，不能证明过去每个交易日看到的版本。
 - 当前没有足够证据报告策略年化收益、Sharpe、最大回撤或做T增益。
-- 实盘接入、订单路由、券商风控和税务处理不在当前范围内。
+- 正式入口始终输出 `promotion_allowed=false` 和 `live_trading_allowed=false`；历史评估通过后仍需独立复核和纸面跟踪。
+- 实盘接入、自动订单路由、券商侧风控和税务处理不在当前范围内。
 
 这些限制会让系统保持现金或阻断回测，不会通过降低数据标准来生成更好看的结果。
 

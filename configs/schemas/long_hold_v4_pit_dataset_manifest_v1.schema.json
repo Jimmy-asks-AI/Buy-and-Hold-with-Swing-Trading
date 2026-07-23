@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "long_hold_v4_pit_dataset_manifest_v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "provider",
+    "license",
+    "coverage_start",
+    "coverage_end",
+    "observed_at",
+    "available_date",
+    "revision_id",
+    "symbol",
+    "frequency",
+    "file_path",
+    "file_sha256",
+    "pit_status",
+    "known_limitations",
+    "current_snapshot",
+    "contains_current_snapshot_backfill",
+    "contains_current_constituents_backfill",
+    "previous_revision_id",
+    "previous_manifest_sha256",
+    "promotion_allowed"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "dataset_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "provider": {"type": "string", "minLength": 1},
+    "license": {
+      "enum": ["LICENSED_RESEARCH_USE", "OFFICIAL_OPEN_RESEARCH_USE"]
+    },
+    "coverage_start": {"type": "string", "format": "date"},
+    "coverage_end": {"type": "string", "format": "date"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "available_date": {"type": "string", "format": "date"},
+    "revision_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "symbol": {"type": "string", "minLength": 1},
+    "frequency": {"type": "string", "minLength": 1},
+    "file_path": {"type": "string", "minLength": 1},
+    "file_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "pit_status": {"const": "QUALIFIED_PIT"},
+    "known_limitations": {"type": "string", "minLength": 1},
+    "current_snapshot": {"const": false},
+    "contains_current_snapshot_backfill": {"const": false},
+    "contains_current_constituents_backfill": {"const": false},
+    "previous_revision_id": {"type": ["string", "null"]},
+    "previous_manifest_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "promotion_allowed": {"const": false}
+  }
+}
