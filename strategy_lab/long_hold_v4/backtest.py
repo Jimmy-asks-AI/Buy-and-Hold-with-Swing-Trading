@@ -262,30 +262,41 @@ def validate_backtest_inputs(
     return p.sort_values(["date", "asset"]), t.sort_values(["signal_date", "asset"]), input_contract_ready
 
 
-def _asset_execution_schedule(prices: pd.DataFrame, targets: pd.DataFrame) -> tuple[dict[pd.Timestamp, pd.DataFrame], int]:
+def _asset_execution_schedule(
+    prices: pd.DataFrame, targets: pd.DataFrame
+) -> tuple[dict[pd.Timestamp, pd.DataFrame], int, pd.DataFrame]:
     tradable_dates = {
         asset: pd.DatetimeIndex(group.loc[group["is_tradable"], "date"].sort_values().unique())
         for asset, group in prices.groupby("asset")
     }
     rows: list[dict[str, Any]] = []
+    pending_rows: list[dict[str, Any]] = []
     for _, target in targets.iterrows():
         dates = tradable_dates[str(target["asset"])]
         location = int(np.searchsorted(dates.to_numpy(), np.datetime64(target["signal_date"]), side="right"))
         if location >= len(dates):
-            raise ContractError(
-                f"target has no asset-level next tradable session: {target['asset']} after {target['signal_date'].date()}"
+            pending_rows.append(
+                {
+                    **target.to_dict(),
+                    "pending_reason": "no_asset_level_tradable_session_before_window_end",
+                }
             )
+            continue
         rows.append({**target.to_dict(), "execution_date": pd.Timestamp(dates[location])})
     scheduled_rows = pd.DataFrame(rows)
     if scheduled_rows.empty:
-        return {}, 0
+        return {}, 0, pd.DataFrame(pending_rows)
     scheduled_rows = scheduled_rows.sort_values(["execution_date", "asset", "signal_date"])
     superseded = int(scheduled_rows.duplicated(["execution_date", "asset"], keep="last").sum())
     scheduled_rows = scheduled_rows.drop_duplicates(["execution_date", "asset"], keep="last")
-    return {
-        pd.Timestamp(date): frame.drop(columns="execution_date").reset_index(drop=True)
-        for date, frame in scheduled_rows.groupby("execution_date", sort=True)
-    }, superseded
+    return (
+        {
+            pd.Timestamp(date): frame.drop(columns="execution_date").reset_index(drop=True)
+            for date, frame in scheduled_rows.groupby("execution_date", sort=True)
+        },
+        superseded,
+        pd.DataFrame(pending_rows),
+    )
 
 
 def _buy_scale(
@@ -356,7 +367,7 @@ def run_weight_backtest(
     tradable_wide = p.pivot(index="date", columns="asset", values="is_tradable").reindex(dates).fillna(False)
     asset_type = p.drop_duplicates("asset").set_index("asset")["asset_type"].astype(str).str.lower().to_dict()
     lifecycle = p.groupby("asset").agg(list_date=("list_date", "first"), delist_date=("delist_date", "first"))
-    scheduled, superseded_signals = _asset_execution_schedule(p, t)
+    scheduled, superseded_signals, pending_targets = _asset_execution_schedule(p, t)
 
     assets = sorted(set(p["asset"]) | set(t["asset"]))
     core = pd.Series(0.0, index=assets)
@@ -506,8 +517,14 @@ def run_weight_backtest(
     metrics["backtest_mode"] = normalized_mode
     metrics["signal_execution"] = "close_signal_asset_level_next_tradable_open"
     metrics["superseded_pending_signals"] = superseded_signals
+    metrics["pending_unexecuted_signals"] = len(pending_targets)
     metrics["overlapping_forward_returns_compounded"] = False
-    return {"nav": nav, "trades": trades, "metrics": metrics}
+    return {
+        "nav": nav,
+        "trades": trades,
+        "pending_targets": pending_targets,
+        "metrics": metrics,
+    }
 
 
 def summarize_backtest(nav: pd.DataFrame, initial_cash: float) -> dict[str, Any]:

@@ -6,6 +6,17 @@
 
 晋级状态：`promotion_allowed=false`
 
+## 正式入口加固
+
+工作包 5 后续审查补上了原实现不能满足正式评估的四个缺口：
+
+1. PIT 使用清单不再自行声明可得日。每条历史使用记录必须解析到版本化源文件中的 `source_row_key + asset + available_date`；源行缺失、重复或字段不一致时 Gate 失败。
+2. 候选表不再提交 `validation_score` 和 `validation_p_value`。正式运行器对所有预登记候选重新执行验证窗口，按20bps额外滑点后的主动收益计算显著性、Holm校正、PBO和Deflated Sharpe。
+3. 绩效基准固定为中证全指全收益 `000985.CSI`。验证期和独立测试期使用两份物理分离的基准文件，价格指数不能替代。
+4. 独立测试消费凭证固定为同一输出根目录下的 `holdout_consumption/independent-test.json`。更换 `run_id` 不能重复读取同一测试期；所有验证窗口先成功，才会登记消费并读取独立文件。
+
+正式入口为 `strategy_lab.long_hold_v4.formal_walk_forward`，运行产物可用其 `verify` 子命令重新验证。验签会核对代码、配置、正式输入、窗口产物、消费凭证、人工复核要求和禁止实盘状态。
+
 ## 窗口定义
 
 窗口按资产级交易日历的有效交易日计数，日期不能用自然日近似。正式运行先冻结日历与 target manifest，再生成带 SHA-256 的 `plan.json`。
@@ -32,16 +43,16 @@
 
 ## 调参与独立测试
 
-参数候选必须预先登记，最多 24 组，多重检验校正固定为 Holm。候选表只允许使用 `train` 和 `validation` 两种 split role；字段名或使用记录中出现 `test`、`holdout` 或 `independent_test` 会直接失败。
+参数候选必须预先登记，最多 24 组，多重检验校正固定为 Holm。候选表只允许登记参数、训练分数和 `train+validation` split role；不得自报验证分数或显著性。正式运行器用验证窗口重新计算结果。字段名或使用记录中出现 `test`、`holdout` 或 `independent_test` 会直接失败。
 
 独立测试由只写一次的消费账本控制。账本绑定：
 
-- walk-forward `run_id`；
+- 首次消费的 walk-forward `run_id`；
 - plan SHA-256；
 - 独立测试数据清单 SHA-256；
 - `FINAL_EVALUATION_ONLY` 用途。
 
-账本存在后，第二次评估会失败。独立测试结果不能回流到参数候选表，也不能修改因子、阈值、成本口径或资产池。
+账本文件名不随 `run_id` 改变。账本存在后，使用其他运行编号再次评估也会失败。独立测试结果不能回流到参数候选表，也不能修改因子、阈值、成本口径或资产池。
 
 ## PIT Gate 绑定
 
@@ -49,6 +60,8 @@
 
 - PIT Gate run_id 与 manifest SHA-256；
 - target manifest SHA-256；
+- PIT 使用清单 SHA-256，以及使用记录和版本化源行的一致性；
+- 验证/独立行情、目标、基准、日历和候选登记表的 SHA-256；
 - 全部数据文件和数据 manifest SHA-256；
 - target 生成代码 commit 与文件 SHA-256；
 - target 配置 SHA-256；
@@ -84,6 +97,8 @@
 - 风险暴露；
 - 核心仓/T 仓归因；
 - 5bps、10bps、20bps 成本情景；
+- 相对中证全指全收益的策略、基准和主动收益；
+- 候选验证收益、Holm校正、PBO与Deflated Sharpe；
 - window manifest 与独立 seal。
 
 窗口目录只写一次。相同 `run_id/window_id` 不能覆盖。
@@ -111,7 +126,7 @@
 | 幸存者偏差 | 使用历史成分、全生命周期证券和退市资产；当前成分回填为硬失败 |
 | 未来函数 | 每行 `available_date <= decision_date`；财务修订按新 revision 进入 |
 | 重复调参 | 只用训练/验证；独立测试消费次数不超过一次 |
-| 多重检验 | 候选族预登记、数量不超预算、校正方法在测试前冻结 |
+| 多重检验 | 候选族预登记；运行器重算验证结果；Holm、PBO和DSR在独立测试前通过 |
 
 任一项失败，窗口或整体流程进入 `BLOCKED`。
 

@@ -68,6 +68,8 @@ class WorkPackage5PitGateTests(unittest.TestCase):
                 {
                     "date": "2020-01-02",
                     "symbol": "000001",
+                    "source_row_key": f"{dataset_id}-row-1",
+                    "asset": "000001",
                     "available_date": available_date,
                     "value": 1.0,
                 }
@@ -97,12 +99,56 @@ class WorkPackage5PitGateTests(unittest.TestCase):
         return register_dataset_revision(root, "versions", source, metadata)
 
     def _target_manifest(
-        self, root: Path, entries: list[dict], *, name: str = "target.json"
+        self,
+        root: Path,
+        entries: list[dict],
+        *,
+        name: str = "target.json",
+        usage_decision_date: str = "2026-07-23",
+        usage_available_date: str | None = None,
     ) -> Path:
         target_code = root / "target_generator.py"
         target_config = root / "target_config.json"
         target_code.write_text("# target fixture\n", encoding="utf-8")
         self._write_json(target_config, {"schema_version": 1})
+        usage_path = root / f"{name.removesuffix('.json')}-pit-usage.csv"
+        pd.DataFrame(
+            [
+                {
+                    "dataset_id": entry["dataset_id"],
+                    "source_revision_id": entry["revision_id"],
+                    "source_row_key": f"{entry['dataset_id']}-row-1",
+                    "asset": "000001",
+                    "decision_date": usage_decision_date,
+                    "available_date": (
+                        usage_available_date
+                        if usage_available_date is not None
+                        else entry["available_date"]
+                    ),
+                }
+                for entry in entries
+            ]
+        ).to_csv(usage_path, index=False)
+        formal_inputs = []
+        for role in (
+            "validation_execution_states",
+            "validation_target_weights",
+            "validation_benchmark_returns",
+            "independent_execution_states",
+            "independent_target_weights",
+            "independent_benchmark_returns",
+            "trading_calendar",
+            "candidate_registry",
+        ):
+            formal_path = root / f"{name.removesuffix('.json')}-{role}.csv"
+            pd.DataFrame([{"fixture": role}]).to_csv(formal_path, index=False)
+            formal_inputs.append(
+                {
+                    "role": role,
+                    "path": formal_path.name,
+                    "sha256": sha256_file(formal_path),
+                }
+            )
         target = {
             "schema_version": 1,
             "target_manifest_id": name.removesuffix(".json"),
@@ -122,6 +168,11 @@ class WorkPackage5PitGateTests(unittest.TestCase):
                     "sha256": sha256_file(target_config),
                 },
             },
+            "point_in_time_usage": {
+                "path": usage_path.name,
+                "sha256": sha256_file(usage_path),
+            },
+            "formal_inputs": formal_inputs,
             "datasets": entries,
         }
         path = root / name
@@ -176,6 +227,45 @@ class WorkPackage5PitGateTests(unittest.TestCase):
             )
             self.assertIn(
                 "stock_history:row_available_dates_not_future",
+                decision["failure_reasons"],
+            )
+
+    def test_usage_ledger_blocks_data_unavailable_at_historical_decision(self):
+        with self._workspace() as tmp:
+            root = Path(tmp)
+            entry = self._registered_entry(root)
+            config = self._gate_config(root, entry["dataset_id"])
+            target = self._target_manifest(
+                root,
+                [entry],
+                usage_decision_date="2020-01-02",
+            )
+            decision = self._run(
+                root, config, target, run_id="historical-lookahead"
+            )
+            self.assertIn(
+                "__target__:pit_usage_no_historical_lookahead",
+                decision["failure_reasons"],
+            )
+
+    def test_usage_ledger_available_date_must_match_versioned_source_row(self):
+        with self._workspace() as tmp:
+            root = Path(tmp)
+            entry = self._registered_entry(
+                root, available_date="2020-01-03"
+            )
+            config = self._gate_config(root, entry["dataset_id"])
+            target = self._target_manifest(
+                root,
+                [entry],
+                usage_decision_date="2020-01-03",
+                usage_available_date="2020-01-02",
+            )
+            decision = self._run(
+                root, config, target, run_id="forged-usage-date"
+            )
+            self.assertIn(
+                "__target__:pit_usage_source_metadata_match",
                 decision["failure_reasons"],
             )
 

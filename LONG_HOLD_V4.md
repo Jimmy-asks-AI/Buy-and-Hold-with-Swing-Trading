@@ -199,13 +199,15 @@ BaoStock估值采集器采用全局限额后分片，每个子进程只写自己
 
 2026-07-23 从最新`main`独立分支完成工作包 5 的工程实现。前置门槛已逐项复核：PR #1至#4均已合并；main提交`965bb6b`的GitHub Actions完整通过；独立克隆和新虚拟环境连续两次合成 replay 均得到`5120887f9565b0ace2e846aec1101c3b5a95ba3ce34d39e93d7ddabe2a25ab1e`；本地订单、账户、清单和回测正确性测试通过。
 
-版本化数据按`dataset_id/revision_id`写入独立目录，同一revision禁止覆盖。新revision必须绑定并保留前序manifest。正式Gate同时校验数据文件、数据manifest、target manifest、目标生成代码commit与哈希、配置哈希、Gate代码与配置哈希；walk-forward启动前会再次复核这些绑定。
+版本化数据按`dataset_id/revision_id`写入独立目录，同一revision禁止覆盖。新revision必须绑定并保留前序manifest。正式Gate同时校验数据文件、数据manifest、target manifest、目标生成代码commit与哈希、配置哈希、Gate代码与配置哈希；walk-forward启动前会再次复核这些绑定。后续正式入口加固要求PIT使用清单逐条解析到版本化源行的`source_row_key`、`asset`和`available_date`，不再接受目标生成器自行声明的可得日。
 
 缺口运行`wp5-gap-audit-20260723-v1`绑定10/10类必需数据，产生74个失败检查，Gate manifest SHA-256为`5811b8292cc8c2df7804f1777371da7798246638f833c3b05ab345830d2724f4`。十类数据分别是历史行业分类、逐版本财务、股票历史估值、ETF基准变更、ETF全收益价格、ETF历史规模流动性、ETF历史费率、ETF历史跟踪误差、指数全收益和指数历史估值。授权、覆盖、版本或正式文件未闭合，没有任何一类被观察数据替代。
 
-walk-forward方法固定为756日滚动训练、20日purge、126日验证、126日步长、20日embargo和252日独立测试，标签期限20日。调参只允许训练和验证，候选族上限24组并使用Holm校正；独立测试由只写一次账本控制。每个窗口要求保存目标权重、订单尝试、实际成交、账户、NAV、成本、风险、核心/T归因和5/10/20bps追加滑点情景。未成交目标不改变持仓，也不产生收益。
+walk-forward方法固定为756日滚动训练、20日purge、126日验证、126日步长、20日embargo和252日独立测试，标签期限20日。调参只允许训练和验证，候选族上限24组。候选登记表不能自报验证分数；正式运行器重新执行全部候选，以20bps额外滑点后相对中证全指全收益的主动收益计算块级显著性、Holm校正、PBO和Deflated Sharpe。独立测试使用固定路径的一次性账本，更换`run_id`不能重复消费。每个窗口保存目标权重、订单尝试、实际成交、未成交目标、账户、NAV、成本、风险、核心/T归因、0/5/10/20bps策略/基准/主动收益和完整哈希。未成交目标不改变持仓，也不产生收益。
 
-当前`formal_backtest_allowed=false`，所有窗口均为`BLOCKED_NOT_RUN`，没有正式绩效结果或失败窗口收益。`promotion_allowed=false`保持不变。完整报告见`reports/LONG_HOLD_V4_WORK_PACKAGE_5_PIT_GATE_2026-07-23.md`与`reports/LONG_HOLD_V4_WORK_PACKAGE_5_WALK_FORWARD_METHOD.md`。
+正式数据可通过`formal_data_intake`批量登记并生成target manifest；该入口要求tracked worktree干净，批次失败会回滚本批新增revision。`formal_walk_forward`提供`run`和`verify`子命令，后者会复核全部顶层产物、窗口产物、独立测试消费状态以及`promotion_allowed=false`、`live_trading_allowed=false`和人工复核要求。
+
+当前`formal_backtest_allowed=false`，所有窗口均为`BLOCKED_NOT_RUN`，没有正式绩效结果或失败窗口收益。工程入口可运行不改变证据结论；真实10类PIT数据、正式目标和全收益基准尚未交付。`promotion_allowed=false`和`live_trading_allowed=false`保持不变。完整报告见`reports/LONG_HOLD_V4_WORK_PACKAGE_5_PIT_GATE_2026-07-23.md`、`reports/LONG_HOLD_V4_WORK_PACKAGE_5_WALK_FORWARD_METHOD.md`与`data_catalog/long_hold_v4_formal_evaluation_data_contract_v1.md`。
 
 ## 历史系统边界
 

@@ -19,6 +19,11 @@
     "maximum_candidate_count": 24,
     "candidate_registry_required": true,
     "multiple_testing_correction": "holm",
+    "familywise_alpha": 0.05,
+    "significance_block_sessions": 20,
+    "pbo_blocks": 8,
+    "maximum_pbo": 0.35,
+    "minimum_deflated_sharpe_probability": 0.95,
     "independent_test_one_time": true
   },
   "cost_scenarios": {
@@ -28,6 +33,11 @@
       10,
       20
     ]
+  },
+  "benchmark": {
+    "benchmark_id": "000985.CSI",
+    "return_basis": "total_return",
+    "description": "中证全指全收益指数；不得以价格指数替代"
   },
   "execution": {
     "signal_execution": "close_signal_asset_level_next_tradable_open",

@@ -62,6 +62,23 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _verify_project_file_binding(
+    root: Path, binding: dict[str, Any], label: str
+) -> Path:
+    relative = str(binding.get("path", ""))
+    expected = str(binding.get("sha256", "")).lower()
+    path = (root / relative).resolve()
+    if root != path and root not in path.parents:
+        raise ContractError(f"{label} path escapes project root")
+    if (
+        not path.is_file()
+        or SHA256_RE.fullmatch(expected) is None
+        or sha256_file(path) != expected
+    ):
+        raise ContractError(f"{label} hash mismatch")
+    return path
+
+
 def load_walk_forward_config(path: str | Path) -> dict[str, Any]:
     config = _read_json(Path(path))
     required = {
@@ -70,6 +87,7 @@ def load_walk_forward_config(path: str | Path) -> dict[str, Any]:
         "method",
         "tuning",
         "cost_scenarios",
+        "benchmark",
         "execution",
         "governance",
     }
@@ -111,6 +129,31 @@ def load_walk_forward_config(path: str | Path) -> dict[str, Any]:
         raise ContractError("tuning roles must be exactly train and validation")
     if int(tuning.get("maximum_candidate_count", 0)) < 1:
         raise ContractError("maximum_candidate_count must be positive")
+    familywise_alpha = float(tuning.get("familywise_alpha", float("nan")))
+    if not 0.0 < familywise_alpha <= 0.10:
+        raise ContractError("familywise_alpha must be in (0, 0.10]")
+    significance_blocks = int(
+        tuning.get("significance_block_sessions", 0)
+    )
+    if significance_blocks < int(method["label_horizon_sessions"]):
+        raise ContractError(
+            "significance_block_sessions must cover the label horizon"
+        )
+    pbo_blocks = int(tuning.get("pbo_blocks", 0))
+    if pbo_blocks < 2 or pbo_blocks % 2 != 0:
+        raise ContractError("pbo_blocks must be an even integer >= 2")
+    maximum_pbo = float(tuning.get("maximum_pbo", float("nan")))
+    if not 0.0 <= maximum_pbo <= 0.50:
+        raise ContractError("maximum_pbo must be in [0, 0.50]")
+    minimum_dsr = float(
+        tuning.get(
+            "minimum_deflated_sharpe_probability", float("nan")
+        )
+    )
+    if not 0.50 <= minimum_dsr < 1.0:
+        raise ContractError(
+            "minimum_deflated_sharpe_probability must be in [0.50, 1)"
+        )
     if tuning.get("multiple_testing_correction") not in {
         "holm",
         "bonferroni",
@@ -126,6 +169,15 @@ def load_walk_forward_config(path: str | Path) -> dict[str, Any]:
     bps = [int(value) for value in config["cost_scenarios"].get("additional_slippage_bps", [])]
     if bps != [5, 10, 20]:
         raise ContractError("cost scenarios must be exactly 5, 10 and 20 bps")
+    benchmark = config["benchmark"]
+    if not isinstance(benchmark, dict):
+        raise ContractError("benchmark config must be an object")
+    if not str(benchmark.get("benchmark_id", "")).strip():
+        raise ContractError("benchmark_id is required")
+    if benchmark.get("return_basis") != "total_return":
+        raise ContractError(
+            "formal benchmark must use total_return basis"
+        )
     if config["execution"].get("unfilled_targets_accrue_returns") is not False:
         raise ContractError("unfilled targets must not accrue returns")
     if config["governance"].get("promotion_allowed") is not False:
@@ -328,6 +380,38 @@ def assert_tuning_inputs(split_roles: Iterable[str]) -> None:
         )
 
 
+def _adjust_p_values(values: pd.Series, method: str) -> pd.Series:
+    p_values = pd.to_numeric(values, errors="coerce")
+    if p_values.isna().any() or ((p_values < 0.0) | (p_values > 1.0)).any():
+        raise ContractError("validation_p_value values must be in [0, 1]")
+    count = len(p_values)
+    if count == 1 and method == "none_if_single":
+        return p_values.astype(float)
+    if method == "none_if_single":
+        raise ContractError("none_if_single is only valid for one candidate")
+    if method == "bonferroni":
+        return (p_values * count).clip(upper=1.0)
+
+    order = p_values.sort_values(kind="mergesort").index.tolist()
+    adjusted = pd.Series(index=p_values.index, dtype=float)
+    if method == "holm":
+        running = 0.0
+        for rank, index in enumerate(order):
+            candidate = float(p_values.loc[index]) * (count - rank)
+            running = max(running, candidate)
+            adjusted.loc[index] = min(running, 1.0)
+        return adjusted
+    if method == "fdr_bh":
+        running = 1.0
+        for reverse_rank, index in enumerate(reversed(order), start=1):
+            rank = count - reverse_rank + 1
+            candidate = float(p_values.loc[index]) * count / rank
+            running = min(running, candidate)
+            adjusted.loc[index] = min(running, 1.0)
+        return adjusted
+    raise ContractError(f"unsupported multiple-testing correction: {method}")
+
+
 def select_frozen_candidate(
     candidate_scores: pd.DataFrame, config: dict[str, Any]
 ) -> dict[str, Any]:
@@ -336,6 +420,7 @@ def select_frozen_candidate(
         "parameters_json",
         "train_score",
         "validation_score",
+        "validation_p_value",
         "split_roles_used",
     }
     missing = sorted(required.difference(candidate_scores.columns))
@@ -359,11 +444,24 @@ def select_frozen_candidate(
             f"candidate registry contains holdout-derived fields: {forbidden}"
         )
     scores = candidate_scores.copy()
-    for column in ("train_score", "validation_score"):
+    for column in ("train_score", "validation_score", "validation_p_value"):
         scores[column] = pd.to_numeric(scores[column], errors="coerce")
-    if scores[["train_score", "validation_score"]].isna().any().any():
+    if scores[["train_score", "validation_score", "validation_p_value"]].isna().any().any():
         raise ContractError("candidate registry contains invalid scores")
-    selected = scores.sort_values(
+    correction = str(config["tuning"]["multiple_testing_correction"])
+    alpha = float(config["tuning"]["familywise_alpha"])
+    scores["adjusted_validation_p_value"] = _adjust_p_values(
+        scores["validation_p_value"], correction
+    )
+    scores["survives_multiple_testing"] = (
+        scores["adjusted_validation_p_value"] <= alpha
+    )
+    eligible = scores[scores["survives_multiple_testing"]].copy()
+    if eligible.empty:
+        raise ContractError(
+            "no candidate survives the frozen multiple-testing correction"
+        )
+    selected = eligible.sort_values(
         ["validation_score", "train_score", "candidate_id"],
         ascending=[False, False, True],
     ).iloc[0]
@@ -376,11 +474,23 @@ def select_frozen_candidate(
         "parameters": parameters,
         "train_score": float(selected["train_score"]),
         "validation_score": float(selected["validation_score"]),
+        "validation_p_value": float(selected["validation_p_value"]),
+        "adjusted_validation_p_value": float(
+            selected["adjusted_validation_p_value"]
+        ),
+        "familywise_alpha": alpha,
         "selection_data_roles": sorted(ALLOWED_TUNING_ROLES),
-        "multiple_testing_correction": config["tuning"][
-            "multiple_testing_correction"
-        ],
+        "multiple_testing_correction": correction,
         "candidate_count": len(scores),
+        "surviving_candidate_count": len(eligible),
+        "candidate_audit": scores[
+            [
+                "candidate_id",
+                "validation_p_value",
+                "adjusted_validation_p_value",
+                "survives_multiple_testing",
+            ]
+        ].sort_values("candidate_id").to_dict(orient="records"),
         "frozen_before_independent_test": True,
         "promotion_allowed": False,
     }
@@ -443,29 +553,46 @@ def verify_pit_gate_binding(
     if manifest.get("promotion_allowed") is not False:
         raise ContractError("PIT Gate must not promote a model")
 
-    def verify_project_binding(binding: dict[str, Any], label: str) -> None:
-        relative = str(binding.get("path", ""))
-        expected = str(binding.get("sha256", "")).lower()
-        path = (root / relative).resolve()
-        if root != path and root not in path.parents:
-            raise ContractError(f"{label} path escapes project root")
-        if (
-            not path.is_file()
-            or SHA256_RE.fullmatch(expected) is None
-            or sha256_file(path) != expected
-        ):
-            raise ContractError(f"{label} hash mismatch")
-
-    verify_project_binding(manifest["target_manifest"], "target manifest")
+    _verify_project_file_binding(root, manifest["target_manifest"], "target manifest")
+    usage_binding = manifest.get("point_in_time_usage")
+    if not isinstance(usage_binding, dict):
+        raise ContractError("PIT usage ledger binding is missing")
+    _verify_project_file_binding(root, usage_binding, "PIT usage ledger")
+    formal_inputs = manifest.get("formal_inputs")
+    if not isinstance(formal_inputs, list) or not formal_inputs:
+        raise ContractError("formal input bindings are missing")
+    formal_roles = {
+        "validation_execution_states",
+        "validation_target_weights",
+        "validation_benchmark_returns",
+        "independent_execution_states",
+        "independent_target_weights",
+        "independent_benchmark_returns",
+        "trading_calendar",
+        "candidate_registry",
+    }
+    actual_roles = {
+        str(item.get("role", "")).strip()
+        for item in formal_inputs
+        if isinstance(item, dict)
+    }
+    if actual_roles != formal_roles or len(formal_inputs) != len(formal_roles):
+        raise ContractError("formal input binding roles are incomplete")
+    for item in formal_inputs:
+        _verify_project_file_binding(
+            root, item, f"formal input {item.get('role')}"
+        )
     for dataset in manifest.get("input_datasets", []):
-        verify_project_binding(
+        _verify_project_file_binding(
+            root,
             {
                 "path": dataset.get("file_path"),
                 "sha256": dataset.get("file_sha256"),
             },
             f"dataset file {dataset.get('dataset_id')}",
         )
-        verify_project_binding(
+        _verify_project_file_binding(
+            root,
             {
                 "path": dataset.get("manifest_path"),
                 "sha256": dataset.get("manifest_sha256"),
@@ -477,8 +604,11 @@ def verify_pit_gate_binding(
         if not isinstance(generation, dict):
             raise ContractError(f"{generation_label} binding is missing")
         for item in generation.get("code_files", []):
-            verify_project_binding(item, f"{generation_label} code")
-        verify_project_binding(
+            _verify_project_file_binding(
+                root, item, f"{generation_label} code"
+            )
+        _verify_project_file_binding(
+            root,
             generation.get("config", {}), f"{generation_label} config"
         )
     for output in manifest.get("outputs", []):
@@ -497,6 +627,8 @@ def verify_pit_gate_binding(
         "pit_gate_run_id": str(manifest["run_id"]),
         "pit_gate_manifest_sha256": actual_hash,
         "target_manifest_sha256": str(manifest["target_manifest"]["sha256"]),
+        "point_in_time_usage": usage_binding,
+        "formal_input_bindings": formal_inputs,
         "input_datasets": manifest["input_datasets"],
         "promotion_allowed": False,
     }
@@ -566,8 +698,24 @@ def normalize_execution_states(prices: pd.DataFrame) -> tuple[pd.DataFrame, pd.D
     )
 
 
+def _unfilled_reason(attempt: Any) -> str:
+    if not bool(attempt.has_market_data):
+        return "missing_market_data"
+    if bool(attempt.is_suspended):
+        return "suspended"
+    if bool(attempt.is_limit_up):
+        return "limit_up_conservative_no_trade"
+    if bool(attempt.is_limit_down):
+        return "limit_down_conservative_no_trade"
+    if bool(attempt.is_delisted):
+        return "delisted"
+    return "not_executable"
+
+
 def build_order_attempt_audit(
-    execution_states: pd.DataFrame, fills: pd.DataFrame
+    execution_states: pd.DataFrame,
+    fills: pd.DataFrame,
+    pending_targets: pd.DataFrame,
 ) -> pd.DataFrame:
     columns = [
         "order_id",
@@ -582,8 +730,6 @@ def build_order_attempt_audit(
         "notional",
         "cost",
     ]
-    if fills.empty:
-        return pd.DataFrame(columns=columns)
     states = execution_states.copy()
     states["date"] = pd.to_datetime(states["date"]).dt.normalize()
     rows: list[dict[str, Any]] = []
@@ -605,18 +751,8 @@ def build_order_attempt_audit(
             is_fill = attempt_date == fill_date
             if is_fill:
                 reason = "executed_at_asset_level_next_tradable_open"
-            elif not bool(attempt.has_market_data):
-                reason = "missing_market_data"
-            elif bool(attempt.is_suspended):
-                reason = "suspended"
-            elif bool(attempt.is_limit_up):
-                reason = "limit_up_conservative_no_trade"
-            elif bool(attempt.is_limit_down):
-                reason = "limit_down_conservative_no_trade"
-            elif bool(attempt.is_delisted):
-                reason = "delisted"
             else:
-                reason = "not_executable"
+                reason = _unfilled_reason(attempt)
             rows.append(
                 {
                     "order_id": order_id,
@@ -632,6 +768,50 @@ def build_order_attempt_audit(
                     "cost": float(fill.cost) if is_fill else 0.0,
                 }
             )
+    if not pending_targets.empty:
+        for target in pending_targets.itertuples(index=False):
+            signal_date = pd.Timestamp(target.signal_date).normalize()
+            order_key = (
+                f"{signal_date.date()}|{target.asset}|portfolio|rebalance|PENDING"
+            )
+            order_id = hashlib.sha256(order_key.encode("utf-8")).hexdigest()[:24]
+            attempts = states[
+                states["asset"].astype(str).eq(str(target.asset))
+                & states["date"].gt(signal_date)
+            ].sort_values("date")
+            if attempts.empty:
+                rows.append(
+                    {
+                        "order_id": order_id,
+                        "signal_date": signal_date,
+                        "attempt_date": pd.NaT,
+                        "fill_date": pd.NaT,
+                        "asset": str(target.asset),
+                        "sleeve": "portfolio",
+                        "side": "rebalance",
+                        "status": "PENDING_UNFILLED",
+                        "reason": "no_asset_state_after_signal",
+                        "notional": 0.0,
+                        "cost": 0.0,
+                    }
+                )
+                continue
+            for attempt in attempts.itertuples(index=False):
+                rows.append(
+                    {
+                        "order_id": order_id,
+                        "signal_date": signal_date,
+                        "attempt_date": pd.Timestamp(attempt.date).normalize(),
+                        "fill_date": pd.NaT,
+                        "asset": str(target.asset),
+                        "sleeve": "portfolio",
+                        "side": "rebalance",
+                        "status": "PENDING_UNFILLED",
+                        "reason": _unfilled_reason(attempt),
+                        "notional": 0.0,
+                        "cost": 0.0,
+                    }
+                )
     return pd.DataFrame(rows, columns=columns)
 
 
@@ -778,7 +958,10 @@ def run_audited_window_backtest(
         mode="formal",
     )
     fills = result["trades"].copy()
-    orders = build_order_attempt_audit(execution_states, fills)
+    pending_targets = result["pending_targets"].copy()
+    orders = build_order_attempt_audit(
+        execution_states, fills, pending_targets
+    )
     attribution = build_sleeve_attribution(
         result["nav"], fills, initial_cash=initial_cash
     )
@@ -807,6 +990,7 @@ def run_audited_window_backtest(
         "target_weights": targets.copy(),
         "orders": orders,
         "fills": fills,
+        "pending_targets": pending_targets,
         "account": account,
         "nav": result["nav"],
         "attribution": attribution,
@@ -829,6 +1013,8 @@ def run_audited_window_backtest(
 def write_window_bundle(
     output_root: str | Path,
     *,
+    project_root: str | Path,
+    pit_gate_run_directory: str | Path,
     run_id: str,
     window_id: str,
     split_role: str,
@@ -845,7 +1031,8 @@ def write_window_bundle(
         "target_manifest_sha256",
         "code_commit",
         "code_files",
-        "config_sha256",
+        "config_bindings",
+        "formal_input_bindings",
         "training_parameters",
         "data_manifest",
         "cost_assumptions",
@@ -856,7 +1043,6 @@ def write_window_bundle(
     for field in (
         "pit_gate_manifest_sha256",
         "target_manifest_sha256",
-        "config_sha256",
     ):
         if SHA256_RE.fullmatch(str(context[field])) is None:
             raise ContractError(f"window context has invalid {field}")
@@ -872,21 +1058,59 @@ def write_window_bundle(
         for item in code_files
     ):
         raise ContractError("window context has invalid code file binding")
+    root = Path(project_root).resolve()
+    gate_binding = verify_pit_gate_binding(pit_gate_run_directory, root)
+    if (
+        str(context["pit_gate_run_id"]) != gate_binding["pit_gate_run_id"]
+        or str(context["pit_gate_manifest_sha256"])
+        != gate_binding["pit_gate_manifest_sha256"]
+        or str(context["target_manifest_sha256"])
+        != gate_binding["target_manifest_sha256"]
+    ):
+        raise ContractError("window context does not match verified PIT Gate")
+    for item in code_files:
+        _verify_project_file_binding(root, item, "window code")
+    config_bindings = context["config_bindings"]
+    if not isinstance(config_bindings, list) or not config_bindings:
+        raise ContractError("window context requires config bindings")
+    for item in config_bindings:
+        if not isinstance(item, dict) or not str(item.get("role", "")).strip():
+            raise ContractError("window config binding is invalid")
+        _verify_project_file_binding(
+            root, item, f"window config {item.get('role')}"
+        )
+    formal_inputs = context["formal_input_bindings"]
+    if not isinstance(formal_inputs, list) or not formal_inputs:
+        raise ContractError("window context requires formal input bindings")
+    for item in formal_inputs:
+        if not isinstance(item, dict) or not str(item.get("role", "")).strip():
+            raise ContractError("window formal input binding is invalid")
+        _verify_project_file_binding(
+            root, item, f"formal input {item.get('role')}"
+        )
     if not isinstance(context["training_parameters"], dict):
         raise ContractError("window training_parameters must be an object")
     if not isinstance(context["data_manifest"], dict):
         raise ContractError("window data_manifest must be an object")
     if not isinstance(context["cost_assumptions"], dict):
         raise ContractError("window cost_assumptions must be an object")
-    if split_role == "independent_test" and not SHA256_RE.fullmatch(
-        str(context.get("holdout_consumption_sha256", ""))
-    ):
-        raise ContractError("independent-test window must bind holdout consumption")
+    if context["data_manifest"] != artifacts["input_hashes"]:
+        raise ContractError("window data manifest does not match audited inputs")
+    if split_role == "independent_test":
+        holdout_binding = context.get("holdout_consumption_binding")
+        if not isinstance(holdout_binding, dict):
+            raise ContractError(
+                "independent-test window must bind holdout consumption"
+            )
+        _verify_project_file_binding(
+            root, holdout_binding, "holdout consumption ledger"
+        )
 
     required_artifacts = {
         "target_weights",
         "orders",
         "fills",
+        "pending_targets",
         "account",
         "nav",
         "attribution",
@@ -910,6 +1134,7 @@ def write_window_bundle(
         "target_weights",
         "orders",
         "fills",
+        "pending_targets",
         "account",
         "nav",
         "attribution",
@@ -942,7 +1167,8 @@ def write_window_bundle(
         "target_manifest_sha256": context["target_manifest_sha256"],
         "code_commit": context["code_commit"],
         "code_files": context["code_files"],
-        "config_sha256": context["config_sha256"],
+        "config_bindings": context["config_bindings"],
+        "formal_input_bindings": context["formal_input_bindings"],
         "training_parameters": context["training_parameters"],
         "data_manifest": context["data_manifest"],
         "cost_assumptions": context["cost_assumptions"],
@@ -1016,6 +1242,8 @@ def build_bias_audit(
     registered_candidate_count: int,
     maximum_candidate_count: int,
     multiple_testing_correction: str,
+    adjusted_p_values_verified: bool,
+    candidate_registry_frozen_before_holdout: bool,
 ) -> dict[str, Any]:
     roles = {str(value).strip() for value in tuning_split_roles}
     checks = {
@@ -1038,7 +1266,15 @@ def build_bias_audit(
             <= int(maximum_candidate_count)
             and multiple_testing_correction
             in {"holm", "bonferroni", "fdr_bh", "none_if_single"},
-            "requirement": "candidate family is registered and correction is frozen before holdout",
+            "requirement": "candidate family and correction method are registered",
+        },
+        "multiple_testing_applied": {
+            "passed": bool(adjusted_p_values_verified),
+            "requirement": "adjusted validation p-values were computed and verified",
+        },
+        "candidate_registry_frozen": {
+            "passed": bool(candidate_registry_frozen_before_holdout),
+            "requirement": "candidate registry was sealed before holdout consumption",
         },
     }
     failures = sorted(key for key, value in checks.items() if not value["passed"])

@@ -44,6 +44,24 @@ REQUIRED_DATASET_METADATA = (
     "known_limitations",
 )
 DECISION_COLUMNS = ("dataset_id", "status", "reason_code", "detail")
+PIT_USAGE_COLUMNS = {
+    "dataset_id",
+    "source_revision_id",
+    "source_row_key",
+    "asset",
+    "decision_date",
+    "available_date",
+}
+FORMAL_INPUT_ROLES = {
+    "validation_execution_states",
+    "validation_target_weights",
+    "validation_benchmark_returns",
+    "independent_execution_states",
+    "independent_target_weights",
+    "independent_benchmark_returns",
+    "trading_calendar",
+    "candidate_registry",
+}
 
 
 def canonical_json_bytes(payload: Any) -> bytes:
@@ -414,6 +432,389 @@ def _audit_dataset_available_dates(
     except (OSError, UnicodeError, ValueError) as exc:
         raise ContractError(f"cannot stream available_date from {path}: {exc}") from exc
     return invalid_count, row_count, future_count
+
+
+def _validate_point_in_time_usage(
+    root: Path,
+    target_manifest: dict[str, Any],
+    dataset_map: dict[str, dict[str, Any]],
+    required_dataset_ids: list[str],
+    run_decision_date: pd.Timestamp,
+    rows: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Validate every source row actually consumed by historical decisions."""
+
+    binding = target_manifest.get("point_in_time_usage")
+    binding = binding if isinstance(binding, dict) else {}
+    relative = str(binding.get("path", "")).strip()
+    expected_hash = str(binding.get("sha256", "")).strip().lower()
+    try:
+        path = _safe_path(root, relative)
+    except ContractError as exc:
+        _decision(
+            rows,
+            "__target__",
+            "pit_usage_ledger_hash_match",
+            False,
+            str(exc),
+        )
+        return {}
+
+    hash_ok = (
+        path.is_file()
+        and SHA256_RE.fullmatch(expected_hash) is not None
+        and sha256_file(path) == expected_hash
+    )
+    _decision(
+        rows,
+        "__target__",
+        "pit_usage_ledger_hash_match",
+        hash_ok,
+        relative,
+    )
+    if not hash_ok:
+        return {}
+    if not (path.name.lower().endswith(".csv") or path.name.lower().endswith(".csv.gz")):
+        _decision(
+            rows,
+            "__target__",
+            "pit_usage_ledger_schema_valid",
+            False,
+            f"unsupported format: {path.name}",
+        )
+        return {"path": relative, "sha256": expected_hash}
+
+    invalid_dates = 0
+    future_decisions = 0
+    lookahead_rows = 0
+    duplicate_rows = 0
+    row_count = 0
+    used_dataset_ids: set[str] = set()
+    unknown_dataset_ids: set[str] = set()
+    revision_mismatches: set[str] = set()
+    seen_keys: set[tuple[str, str, str, str, str]] = set()
+    usage_claims: dict[
+        str, dict[str, set[tuple[str, str, str]]]
+    ] = {}
+    blank_source_keys = 0
+    schema_valid = True
+    try:
+        chunks = pd.read_csv(path, dtype=str, chunksize=250_000)
+        for chunk in chunks:
+            missing = sorted(PIT_USAGE_COLUMNS.difference(chunk.columns))
+            if missing:
+                schema_valid = False
+                break
+            row_count += len(chunk)
+            decision_dates = pd.to_datetime(
+                chunk["decision_date"], errors="coerce"
+            ).dt.normalize()
+            available_dates = pd.to_datetime(
+                chunk["available_date"], errors="coerce"
+            ).dt.normalize()
+            invalid_dates += int(
+                (decision_dates.isna() | available_dates.isna()).sum()
+            )
+            future_decisions += int((decision_dates > run_decision_date).sum())
+            lookahead_rows += int((available_dates > decision_dates).sum())
+
+            for item in chunk[
+                [
+                    "dataset_id",
+                    "source_revision_id",
+                    "source_row_key",
+                    "asset",
+                    "decision_date",
+                ]
+            ].itertuples(index=False, name=None):
+                key = tuple(str(value).strip() for value in item)
+                if key in seen_keys:
+                    duplicate_rows += 1
+                seen_keys.add(key)
+
+            for dataset_id, revision_id in chunk[
+                ["dataset_id", "source_revision_id"]
+            ].itertuples(index=False, name=None):
+                dataset_id = str(dataset_id).strip()
+                revision_id = str(revision_id).strip()
+                used_dataset_ids.add(dataset_id)
+                entry = dataset_map.get(dataset_id)
+                if entry is None:
+                    unknown_dataset_ids.add(dataset_id)
+                elif revision_id != str(entry.get("revision_id", "")).strip():
+                    revision_mismatches.add(
+                        f"{dataset_id}:{revision_id}"
+                    )
+            for (
+                dataset_id,
+                revision_id,
+                source_row_key,
+                asset,
+                available_date,
+            ) in chunk[
+                [
+                    "dataset_id",
+                    "source_revision_id",
+                    "source_row_key",
+                    "asset",
+                    "available_date",
+                ]
+            ].itertuples(index=False, name=None):
+                dataset_id = (
+                    "" if pd.isna(dataset_id) else str(dataset_id).strip()
+                )
+                revision_id = (
+                    "" if pd.isna(revision_id) else str(revision_id).strip()
+                )
+                source_row_key = (
+                    ""
+                    if pd.isna(source_row_key)
+                    else str(source_row_key).strip()
+                )
+                asset = "" if pd.isna(asset) else str(asset).strip()
+                parsed_available = pd.to_datetime(
+                    available_date, errors="coerce"
+                )
+                if not source_row_key:
+                    blank_source_keys += 1
+                    continue
+                normalized_available = (
+                    ""
+                    if pd.isna(parsed_available)
+                    else pd.Timestamp(parsed_available)
+                    .normalize()
+                    .date()
+                    .isoformat()
+                )
+                usage_claims.setdefault(dataset_id, {}).setdefault(
+                    source_row_key, set()
+                ).add((revision_id, asset, normalized_available))
+    except (OSError, UnicodeError, ValueError) as exc:
+        schema_valid = False
+        detail = str(exc)
+    else:
+        detail = (
+            f"rows={row_count};invalid_dates={invalid_dates};"
+            f"duplicates={duplicate_rows}"
+        )
+
+    _decision(
+        rows,
+        "__target__",
+        "pit_usage_ledger_schema_valid",
+        (
+            schema_valid
+            and row_count > 0
+            and invalid_dates == 0
+            and duplicate_rows == 0
+            and blank_source_keys == 0
+        ),
+        f"{detail};blank_source_keys={blank_source_keys}",
+    )
+    _decision(
+        rows,
+        "__target__",
+        "pit_usage_no_historical_lookahead",
+        schema_valid and lookahead_rows == 0,
+        f"available_date_after_decision_date={lookahead_rows}",
+    )
+    _decision(
+        rows,
+        "__target__",
+        "pit_usage_decisions_within_run",
+        schema_valid and future_decisions == 0,
+        f"decision_date_after_run={future_decisions}",
+    )
+    _decision(
+        rows,
+        "__target__",
+        "pit_usage_dataset_ids_bound",
+        schema_valid and not unknown_dataset_ids,
+        f"unknown={sorted(unknown_dataset_ids)}",
+    )
+    _decision(
+        rows,
+        "__target__",
+        "pit_usage_revisions_bound",
+        schema_valid and not revision_mismatches,
+        f"mismatches={sorted(revision_mismatches)}",
+    )
+    required = {str(value) for value in required_dataset_ids}
+    missing_usage = sorted(required.difference(used_dataset_ids))
+    _decision(
+        rows,
+        "__target__",
+        "pit_usage_required_datasets_covered",
+        schema_valid and not missing_usage,
+        f"missing={missing_usage}",
+    )
+
+    source_missing = 0
+    source_duplicate = 0
+    source_invalid = 0
+    source_metadata_mismatch = 0
+    source_read_failures = 0
+    if schema_valid:
+        for dataset_id, key_claims in usage_claims.items():
+            entry = dataset_map.get(dataset_id)
+            if entry is None:
+                source_read_failures += len(key_claims)
+                continue
+            try:
+                source_path = _safe_path(
+                    root, str(entry.get("file_path", ""))
+                )
+                source_chunks = pd.read_csv(
+                    source_path,
+                    dtype=str,
+                    usecols=["source_row_key", "asset", "available_date"],
+                    chunksize=250_000,
+                )
+                found: dict[str, list[tuple[str, str]]] = {
+                    key: [] for key in key_claims
+                }
+                for source_chunk in source_chunks:
+                    requested = source_chunk[
+                        source_chunk["source_row_key"]
+                        .astype(str)
+                        .str.strip()
+                        .isin(key_claims)
+                    ]
+                    for key, asset, available_date in requested[
+                        ["source_row_key", "asset", "available_date"]
+                    ].itertuples(index=False, name=None):
+                        key = str(key).strip()
+                        parsed_available = pd.to_datetime(
+                            available_date, errors="coerce"
+                        )
+                        if pd.isna(parsed_available):
+                            source_invalid += 1
+                            normalized_available = ""
+                        else:
+                            normalized_available = (
+                                pd.Timestamp(parsed_available)
+                                .normalize()
+                                .date()
+                                .isoformat()
+                            )
+                        found[key].append(
+                            (str(asset).strip(), normalized_available)
+                        )
+            except (ContractError, OSError, UnicodeError, ValueError):
+                source_read_failures += len(key_claims)
+                continue
+
+            expected_revision = str(entry.get("revision_id", "")).strip()
+            for key, claims in key_claims.items():
+                actual_rows = found.get(key, [])
+                if not actual_rows:
+                    source_missing += 1
+                    continue
+                if len(actual_rows) != 1:
+                    source_duplicate += 1
+                    continue
+                actual_asset, actual_available = actual_rows[0]
+                expected_claims = {
+                    (revision, asset, available)
+                    for revision, asset, available in claims
+                }
+                if expected_claims != {
+                    (expected_revision, actual_asset, actual_available)
+                }:
+                    source_metadata_mismatch += 1
+
+    _decision(
+        rows,
+        "__target__",
+        "pit_usage_source_rows_resolved",
+        (
+            schema_valid
+            and source_missing == 0
+            and source_duplicate == 0
+            and source_invalid == 0
+            and source_read_failures == 0
+        ),
+        (
+            f"missing={source_missing};duplicates={source_duplicate};"
+            f"invalid={source_invalid};read_failures={source_read_failures}"
+        ),
+    )
+    _decision(
+        rows,
+        "__target__",
+        "pit_usage_source_metadata_match",
+        schema_valid and source_metadata_mismatch == 0,
+        f"mismatches={source_metadata_mismatch}",
+    )
+    return {
+        "path": relative,
+        "sha256": expected_hash,
+        "row_count": row_count,
+        "required_columns": sorted(PIT_USAGE_COLUMNS),
+    }
+
+
+def _validate_formal_inputs(
+    root: Path,
+    target_manifest: dict[str, Any],
+    rows: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    items = target_manifest.get("formal_inputs")
+    items = items if isinstance(items, list) else []
+    role_map: dict[str, dict[str, Any]] = {}
+    duplicates: set[str] = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role", "")).strip()
+        if role in role_map:
+            duplicates.add(role)
+        role_map[role] = item
+    roles_ok = set(role_map) == FORMAL_INPUT_ROLES and not duplicates
+    _decision(
+        rows,
+        "__target__",
+        "formal_input_roles_complete",
+        roles_ok,
+        (
+            f"required={sorted(FORMAL_INPUT_ROLES)};"
+            f"actual={sorted(role_map)};duplicates={sorted(duplicates)}"
+        ),
+    )
+
+    bindings: list[dict[str, str]] = []
+    for role in sorted(FORMAL_INPUT_ROLES):
+        item = role_map.get(role, {})
+        relative = str(item.get("path", "")).strip()
+        expected = str(item.get("sha256", "")).strip().lower()
+        try:
+            path = _safe_path(root, relative)
+        except ContractError as exc:
+            _decision(
+                rows,
+                "__target__",
+                f"formal_input_{role}_hash_match",
+                False,
+                str(exc),
+            )
+            continue
+        passed = (
+            path.is_file()
+            and SHA256_RE.fullmatch(expected) is not None
+            and sha256_file(path) == expected
+        )
+        _decision(
+            rows,
+            "__target__",
+            f"formal_input_{role}_hash_match",
+            passed,
+            relative,
+        )
+        if passed:
+            bindings.append(
+                {"role": role, "path": relative, "sha256": expected}
+            )
+    return bindings
 
 
 def _validate_dataset_entry(
@@ -819,6 +1220,15 @@ def run_versioned_pit_gate(
         not extra_ids,
         f"extra={extra_ids}",
     )
+    point_in_time_usage = _validate_point_in_time_usage(
+        root,
+        target_manifest,
+        dataset_map,
+        [str(value) for value in config["required_dataset_ids"]],
+        decision_date,
+        rows,
+    )
+    formal_inputs = _validate_formal_inputs(root, target_manifest, rows)
 
     gate_code_bindings: list[dict[str, str]] = []
     for relative in config["gate_code_paths"]:
@@ -877,6 +1287,8 @@ def run_versioned_pit_gate(
             "path": _relative_path(root, target_file),
             "sha256": sha256_file(target_file),
         },
+        "point_in_time_usage": point_in_time_usage,
+        "formal_inputs": formal_inputs,
         "input_datasets": bindings,
         "target_generation": target_generation,
         "gate_generation": {

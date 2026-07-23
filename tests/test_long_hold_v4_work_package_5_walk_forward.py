@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -145,6 +146,7 @@ class WorkPackage5WalkForwardTests(unittest.TestCase):
                     "parameters_json": '{"lookback": 20}',
                     "train_score": 1.0,
                     "validation_score": 0.5,
+                    "validation_p_value": 0.01,
                     "split_roles_used": "train+independent_test",
                 }
             ]
@@ -236,6 +238,8 @@ class WorkPackage5WalkForwardTests(unittest.TestCase):
             registered_candidate_count=4,
             maximum_candidate_count=24,
             multiple_testing_correction="holm",
+            adjusted_p_values_verified=True,
+            candidate_registry_frozen_before_holdout=True,
         )
         self.assertTrue(passed["passed"])
         self.assertEqual(
@@ -245,6 +249,8 @@ class WorkPackage5WalkForwardTests(unittest.TestCase):
                 "lookahead",
                 "repeated_tuning",
                 "multiple_testing",
+                "multiple_testing_applied",
+                "candidate_registry_frozen",
             },
         )
         self.assertFalse(passed["promotion_allowed"])
@@ -258,13 +264,35 @@ class WorkPackage5WalkForwardTests(unittest.TestCase):
             initial_cash=100000.0,
         )
         with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            fixture_root = Path(tmp)
+            code_path = fixture_root / "generator.py"
+            config_path = fixture_root / "config.json"
+            formal_path = fixture_root / "formal.csv"
+            code_path.write_text("# fixture\n", encoding="utf-8")
+            config_path.write_text("{}\n", encoding="utf-8")
+            formal_path.write_text("value\n1\n", encoding="utf-8")
+            code_binding = {
+                "path": code_path.relative_to(ROOT).as_posix(),
+                "sha256": sha256_file(code_path),
+            }
+            config_binding = {
+                "role": "walk_forward_config",
+                "path": config_path.relative_to(ROOT).as_posix(),
+                "sha256": sha256_file(config_path),
+            }
+            formal_binding = {
+                "role": "target_weights",
+                "path": formal_path.relative_to(ROOT).as_posix(),
+                "sha256": sha256_file(formal_path),
+            }
             context = {
                 "pit_gate_run_id": "pit-001",
                 "pit_gate_manifest_sha256": "a" * 64,
                 "target_manifest_sha256": "b" * 64,
                 "code_commit": "c" * 40,
-                "code_files": [{"path": "generator.py", "sha256": "d" * 64}],
-                "config_sha256": "e" * 64,
+                "code_files": [code_binding],
+                "config_bindings": [config_binding],
+                "formal_input_bindings": [formal_binding],
                 "training_parameters": {"lookback": 20},
                 "data_manifest": result["input_hashes"],
                 "cost_assumptions": {
@@ -272,14 +300,24 @@ class WorkPackage5WalkForwardTests(unittest.TestCase):
                     "additional_slippage_bps": [5, 10, 20],
                 },
             }
-            paths = write_window_bundle(
-                tmp,
-                run_id="wf-001",
-                window_id="validation-01",
-                split_role="validation",
-                context=context,
-                artifacts=result,
-            )
+            with patch(
+                "strategy_lab.long_hold_v4.walk_forward.verify_pit_gate_binding",
+                return_value={
+                    "pit_gate_run_id": "pit-001",
+                    "pit_gate_manifest_sha256": "a" * 64,
+                    "target_manifest_sha256": "b" * 64,
+                },
+            ):
+                paths = write_window_bundle(
+                    fixture_root,
+                    project_root=ROOT,
+                    pit_gate_run_directory=fixture_root / "pit",
+                    run_id="wf-001",
+                    window_id="validation-01",
+                    split_role="validation",
+                    context=context,
+                    artifacts=result,
+                )
             manifest = json.loads(
                 paths["manifest"].read_text(encoding="utf-8")
             )
@@ -289,6 +327,7 @@ class WorkPackage5WalkForwardTests(unittest.TestCase):
                     "target_weights.csv",
                     "orders.csv",
                     "fills.csv",
+                    "pending_targets.csv",
                     "account.csv",
                     "nav.csv",
                     "attribution.csv",
@@ -298,6 +337,53 @@ class WorkPackage5WalkForwardTests(unittest.TestCase):
             )
             self.assertFalse(manifest["promotion_allowed"])
             self.assertFalse(manifest["manual_review_signed"])
+
+    def test_holm_correction_is_applied_before_candidate_selection(self):
+        registry = pd.DataFrame(
+            [
+                {
+                    "candidate_id": "strong",
+                    "parameters_json": '{"lookback": 20}',
+                    "train_score": 0.5,
+                    "validation_score": 0.6,
+                    "validation_p_value": 0.01,
+                    "split_roles_used": "train+validation",
+                },
+                {
+                    "candidate_id": "weak",
+                    "parameters_json": '{"lookback": 60}',
+                    "train_score": 1.0,
+                    "validation_score": 1.0,
+                    "validation_p_value": 0.20,
+                    "split_roles_used": "train+validation",
+                },
+            ]
+        )
+        selected = select_frozen_candidate(
+            registry, self.walk_forward_config
+        )
+        self.assertEqual(selected["candidate_id"], "strong")
+        self.assertAlmostEqual(
+            selected["adjusted_validation_p_value"], 0.02
+        )
+        self.assertEqual(selected["surviving_candidate_count"], 1)
+
+    def test_never_filled_target_remains_in_order_audit(self):
+        prices = self._execution_prices().copy()
+        prices["is_limit_up"] = True
+        result = run_audited_window_backtest(
+            prices,
+            self._targets(),
+            self.strategy_config,
+            self.walk_forward_config,
+            initial_cash=100.0,
+        )
+        self.assertTrue(result["fills"].empty)
+        self.assertEqual(len(result["pending_targets"]), 1)
+        self.assertTrue(
+            result["orders"]["status"].eq("PENDING_UNFILLED").all()
+        )
+        self.assertAlmostEqual(result["nav"].iloc[-1]["nav"], 100.0)
 
     def test_all_windows_can_be_reported_blocked_when_pit_data_is_missing(self):
         plan = build_purged_embargoed_plan(

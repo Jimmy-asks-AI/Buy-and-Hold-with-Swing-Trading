@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/**"
       - "strategy_lab/long_hold_v4/**"
+      - "strategy_lab/backtest_overfit_pbo.py"
       - "strategy_lab/performance_metrics.py"
       - "strategy_lab/portfolio_weighting_constraints.py"
       - "strategy_lab/paper_trading_monitor.py"
@@ -16,11 +17,16 @@ on:
       - "configs/schemas/**"
       - "requirements*.txt"
       - "examples/synthetic_run/**"
+      - "examples/formal_data_intake/**"
       - "README.md"
+      - "LONG_HOLD_V4.md"
+      - "reports/LONG_HOLD_V4*.md"
+      - "notes/long_hold_v4*.md"
   pull_request:
     paths:
       - ".github/workflows/**"
       - "strategy_lab/long_hold_v4/**"
+      - "strategy_lab/backtest_overfit_pbo.py"
       - "strategy_lab/performance_metrics.py"
       - "strategy_lab/portfolio_weighting_constraints.py"
       - "strategy_lab/paper_trading_monitor.py"
@@ -32,7 +38,11 @@ on:
       - "configs/schemas/**"
       - "requirements*.txt"
       - "examples/synthetic_run/**"
+      - "examples/formal_data_intake/**"
       - "README.md"
+      - "LONG_HOLD_V4.md"
+      - "reports/LONG_HOLD_V4*.md"
+      - "notes/long_hold_v4*.md"
 
 jobs:
   test:
